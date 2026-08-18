@@ -1,0 +1,5 @@
+interface:
+  display_name: "Coverage Cat Umbrella"
+  short_description: "Run Coverage Cat's delegated umbrella flow"
+  default_prompt: "Use $coverage-cat-umbrella-purchase to integrate or operate Coverage Cat's delegated umbrella purchase workflow."
+

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Coverage Cat Homeowners"
+  short_description: "Run Coverage Cat's homeowners flows"
+  default_prompt: "Use $coverage-cat-homeowners-purchase to operate Coverage Cat's homeowners direct-handoff or delegated quote workflow."
+
