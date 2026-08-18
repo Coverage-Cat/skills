@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-umbrella-purchase
-description: Use when an operator-authenticated agent needs Coverage Cat to run a delegated umbrella quote, review, offer selection, declarations upload, or bind-continuation workflow. Start with the public discovery JSON at https://www.coveragecat.com/api/agent, the OpenAPI at https://www.coveragecat.com/api/agent/openapi.yaml, and the runtime markdown at https://www.coveragecat.com/api/agent/skill.md.
+description: "Use when an operator-authenticated agent needs Coverage Cat to run a delegated umbrella quote, review, offer selection, declarations upload, or bind-continuation workflow. Start with the public discovery JSON at https://www.coveragecat.com/api/agent, the OpenAPI at https://www.coveragecat.com/api/agent/openapi.yaml, and the runtime markdown at https://www.coveragecat.com/api/agent/skill.md."
 ---
 
 # Coverage Cat Umbrella Purchase
@@ -30,4 +30,3 @@ Use this skill only for Coverage Cat's delegated umbrella purchase flow.
 - Reuse approved operator-side context before you ask the user for more information.
 - Do not ask for credit consent until Coverage Cat returns the documented review state.
 - Poll the published status surface instead of inventing a callback flow.
-

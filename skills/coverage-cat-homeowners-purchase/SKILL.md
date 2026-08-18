@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-homeowners-purchase
-description: Use when an agent needs Coverage Cat's homeowners surfaces: either a direct handoff to Coverage Cat's /intake flow or an operator-key delegated homeowners quote workflow. Start with https://www.coveragecat.com/api/agent, the OpenAPI at https://www.coveragecat.com/api/agent/openapi.yaml, and the runtime markdown at https://www.coveragecat.com/api/agent/homeowners/skill.md.
+description: "Use when an agent needs Coverage Cat's homeowners surfaces: either a direct handoff to Coverage Cat's /intake flow or an operator-key delegated homeowners quote workflow. Start with https://www.coveragecat.com/api/agent, the OpenAPI at https://www.coveragecat.com/api/agent/openapi.yaml, and the runtime markdown at https://www.coveragecat.com/api/agent/homeowners/skill.md."
 ---
 
 # Coverage Cat Homeowners Purchase
@@ -30,4 +30,3 @@ Use this skill for Coverage Cat's homeowners purchase surfaces.
 - Pick the direct or delegated path first and do not mix them in one session.
 - Use `sandbox: true` only on the first delegated homeowners create call when rehearsing.
 - Stop for the documented soft-credit consent step before sending `credit_check_authorized: true`.
-
