@@ -1,0 +1,21 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Coverage Cat Purchase Workflows",
+      "description": "Delegated umbrella quoting plus direct or delegated homeowners purchase flows.",
+      "skills": [
+        "coverage-cat-umbrella-purchase",
+        "coverage-cat-homeowners-purchase"
+      ]
+    },
+    {
+      "title": "Coverage Cat Insurance Tools",
+      "description": "Read-only insurance calculators and the homeowners-agent finder.",
+      "skills": [
+        "coverage-cat-agent-tools"
+      ]
+    }
+  ]
+}

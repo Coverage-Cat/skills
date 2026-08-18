@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-agent-tools
-description: "Use when an agent needs Coverage Cat's read-only insurance calculators or homeowners-agent finder instead of a delegated purchase workflow. Start with https://www.coveragecat.com/api/agent and the public developer docs at https://www.coveragecat.com/developers/openapi."
+description: "Use when an agent needs Coverage Cat's read-only insurance calculators or homeowners-agent finder instead of a delegated purchase workflow. Start with https://www.coveragecat.com/api/agent and the public developer portal at https://www.coveragecat.com/developers."
 ---
 
 # Coverage Cat Agent Tools
@@ -19,7 +19,7 @@ Use this skill for Coverage Cat's read-only APIs and tool pages.
 ## Start here
 
 1. Fetch `https://www.coveragecat.com/api/agent`.
-2. Read `https://www.coveragecat.com/developers/openapi`.
+2. Read `https://www.coveragecat.com/developers`.
 3. Use the published tool endpoints and human-facing tool pages from the discovery document.
 
 ## Do not use when
