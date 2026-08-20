@@ -11,9 +11,15 @@ Start here:
 
 Use these skills when:
 
-- `coverage-cat-umbrella-purchase`: delegated umbrella quoting, review, selection, attach, or bind continuation.
-- `coverage-cat-homeowners-purchase`: direct homeowners handoff or operator-authenticated delegated homeowners quoting.
-- `coverage-cat-agent-tools`: read-only calculators or the homeowners-agent finder.
+- `umbrella-insurance-compare-and-purchase`: delegated umbrella quoting, review, selection, attach, or bind continuation.
+- `homeowners-insurance-compare-and-purchase`: direct homeowners handoff or operator-authenticated delegated homeowners quoting.
+- `insurance-tools`: read-only calculators or the homeowners-agent finder.
+
+Legacy compatibility names remain available for existing installs:
+
+- `coverage-cat-umbrella-purchase`
+- `coverage-cat-homeowners-purchase`
+- `coverage-cat-agent-tools`
 
 Guardrails:
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Umbrella Insurance Compare And Purchase"
+  short_description: "Run Coverage Cat's delegated umbrella compare-and-purchase flow"
+  default_prompt: "Use $umbrella-insurance-compare-and-purchase to integrate or operate Coverage Cat's delegated umbrella purchase workflow."

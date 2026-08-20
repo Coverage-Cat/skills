@@ -1,0 +1,4 @@
+interface:
+  display_name: "Homeowners Insurance Compare And Purchase"
+  short_description: "Run Coverage Cat's homeowners compare-and-purchase flow"
+  default_prompt: "Use $homeowners-insurance-compare-and-purchase to operate Coverage Cat's homeowners direct-handoff or delegated quote workflow."
