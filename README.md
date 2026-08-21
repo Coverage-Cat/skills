@@ -11,10 +11,18 @@ npx skills add Coverage-Cat/skills --list
 Install a specific skill:
 
 ```bash
-npx skills add Coverage-Cat/skills --skill coverage-cat-umbrella-purchase -a codex -y
+npx skills add Coverage-Cat/skills --skill umbrella-insurance-compare-and-purchase -a codex -y
 ```
 
 ## Available skills
+
+- `umbrella-insurance-compare-and-purchase`
+- `homeowners-insurance-compare-and-purchase`
+- `insurance-tools`
+
+## Legacy compatibility skill names
+
+These remain available for existing installs and prompts:
 
 - `coverage-cat-umbrella-purchase`
 - `coverage-cat-homeowners-purchase`
@@ -25,6 +33,7 @@ npx skills add Coverage-Cat/skills --skill coverage-cat-umbrella-purchase -a cod
 - Developer portal: `https://www.coveragecat.com/developers`
 - Discovery JSON: `https://www.coveragecat.com/api/agent`
 - OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
+- Skills hub: `https://www.coveragecat.com/ai/skills`
 
 ## Source of truth
 

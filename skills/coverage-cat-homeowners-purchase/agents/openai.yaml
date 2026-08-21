@@ -1,5 +1,4 @@
 interface:
   display_name: "Coverage Cat Homeowners"
-  short_description: "Run Coverage Cat's homeowners flows"
-  default_prompt: "Use $coverage-cat-homeowners-purchase to operate Coverage Cat's homeowners direct-handoff or delegated quote workflow."
-
+  short_description: "Run Coverage Cat's consumer-prefill or delegated homeowners flow"
+  default_prompt: "Use $coverage-cat-homeowners-purchase to operate Coverage Cat's homeowners purchase workflow. Default to the consumer-prefill handoff when no operator bearer key is available in runtime, fall back to the plain browser handoff only when prefill is unavailable, and only use the delegated flow when a real operator key is already present."

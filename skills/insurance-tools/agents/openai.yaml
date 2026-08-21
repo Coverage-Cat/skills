@@ -1,0 +1,4 @@
+interface:
+  display_name: "Insurance Tools"
+  short_description: "Use Coverage Cat's read-only insurance calculators"
+  default_prompt: "Use $insurance-tools for Coverage Cat's read-only calculator and agent-finder APIs."

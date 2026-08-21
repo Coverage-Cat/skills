@@ -1,37 +1,55 @@
 ---
 name: coverage-cat-homeowners-purchase
-description: "Use for Coverage Cat homeowners quoting. This skill covers two paths: a direct handoff to Coverage Cat's `/intake`, follow-up emails, and consumer offers portal, and an operator-partner delegated loop that fills the application from approved CRM, loan, prior-session, email, or policy context, gets one review plus soft-credit consent, submits, then checks for quotes."
+description: "Use for Coverage Cat homeowners quoting. This skill covers two paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated loop that fills the application from approved CRM, loan, prior-session, email, or policy context, gets one review plus soft-credit consent, submits, then checks for quotes."
 ---
 
 # Coverage Cat Homeowners Purchase Skill
 
-You are helping a user get homeowners quotes. This skill covers both the direct homeowner handoff and the operator-partner delegated homeowners loop. Use the separate umbrella purchase skill for umbrella quoting.
+You are helping a user get homeowners quotes. This skill covers both the consumer-prefill handoff and the operator-partner delegated homeowners loop. Use the separate umbrella purchase skill for umbrella quoting.
 
 ## Machine-Readable Contract
 
 Read the discovery and schema surfaces before you start guessing endpoint names or payloads:
 
 1. `GET /api/agent` lists the umbrella and homeowners operation maps, including the delegated homeowners fix-issues email endpoint and the direct-intake follow-up URL templates.
-2. `GET /api/agent/openapi.yaml` is the authoritative delegated-flow schema for the operator homeowners loop.
+2. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published homeowners and consumer handoff endpoints.
 3. The direct-homeowner follow-up API lives under `/api/intake/:uid/...` and is described in this skill even though it is not part of the delegated operator loop.
+
+## API Contract Quick Reference
+
+Pin the stable wire contract with `Coverage-Cat-API-Version: v1` when you want a fully explicit request shape, and send `Idempotency-Key: ...` on write calls you may retry. Coverage Cat also echoes `X-Skill-Version: 1.0.0` so you can log which published runtime-contract revision served the response. Example consumer-prefill write:
+
+```bash
+curl -X POST https://www.coveragecat.com/api/consumer/homeowners/prefill \
+  -H "Content-Type: application/json" \
+  -H "Coverage-Cat-API-Version: v1" \
+  -H "Idempotency-Key: consumer-home-prefill-001" \
+  -d '{"credit_consent_pending":true,"intake":{"full_name":"Taylor Example","home":[{}]}}'
+```
+
+Sandbox and errors: the consumer-prefill handoff does not use a separate sandbox flag, while the delegated operator path uses top-level `sandbox: true` only on the first create call for a rehearsal `uid`. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
+
+Payment progression: delegated homeowners quoting does not expose a separate payment API step today. Once offers are ready, Coverage Cat hands the homeowner to its secure portal for final selection, confirmation of estimated answers, payment, and bind.
 
 ## Choose the Path
 
-This skill supports two different jobs. Pick one path first, because the direct homeowner path and the operator-partner path do not share the same loop.
+This skill supports two different jobs. Pick one path first, because the consumer-prefill path and the operator-partner path do not share the same loop.
 
-1. Use the direct homeowner path when the homeowner can work with Coverage Cat on their own, or when you do not have a real operator key.
+1. Use the consumer-prefill path when the homeowner's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
 2. Use the operator-partner path when you have a real Coverage Cat operator key and approved back-office context you can use to prefill the application.
-3. Do not mix the two paths in one session. The direct path hands off to Coverage Cat's `/intake` flow, follow-up emails, and consumer offers portal. The operator path uses the delegated API and dashboard.
+3. Do not mix the two paths in one session. Path 1 is an unauthenticated handoff into Coverage Cat's own review page and then its normal `/intake` and portal flow. Path 2 uses the delegated API and dashboard.
 
 ## Golden Paths
 
-### Path 1: Direct homeowner handoff
+### Path 1: Consumer prefill handoff
 
-1. Use this path when there is no operator key for delegated quoting, or when the homeowner should work with Coverage Cat directly.
-2. In production, send `https://www.coveragecat.com/intake`. In staging or another deployed environment, use that environment's origin plus `/intake`.
-3. Explain that Coverage Cat will ask for the home address, homeowner details, and prior coverage details, then continue the normal site, email, and portal flow from there.
-4. After the handoff, answer questions if needed, but do not create a delegated operator intake. If you do not have first-party intake API access, Path 1 stays a browser handoff.
-5. If you need to rehearse this direct path, send the tester to the current environment origin plus `/intake?ltp=owned_homes&sandbox=homeowners`, use fake or test contact details, and expect mocked homeowners offers on the normal consumer offers page after submit. This browser sandbox does not need an operator key and does not send live customer email or carrier traffic.
+1. Use this path when the shopper wants their own AI agent to gather the fullest homeowners application from user-controlled context before a single review step, or when you do not have an operator key.
+2. Call `POST /api/consumer/homeowners/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
+3. Show one review card from `review_summary`, with the soft-credit consent prompt first and the prefilled application below it.
+4. Open `resume_url` so Coverage Cat can render the same one-shot review-and-consent page on `/intake?resume=...`.
+5. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
+6. If your runtime cannot prefill, fall back to the current environment origin plus `/intake`. In production that is `https://www.coveragecat.com/intake`.
+7. If you need to rehearse the plain browser fallback, send the tester to the current environment origin plus `/intake?ltp=owned_homes&sandbox=homeowners`, use fake or test contact details, and expect mocked homeowners offers on the normal consumer offers page after submit. This browser sandbox does not need an operator key and does not send live customer email or carrier traffic.
 
 #### Optional first-party follow-up API for Path 1
 
@@ -41,7 +59,7 @@ Use this only when a direct-homeowner assistant already has approved access to C
 2. Read the returned payload under `resource`. The important fields are `resource.status`, `resource.missing_fields`, `resource.review_estimates`, `resource.fix_issues_request_login_url`, and the sensitive direct session link `resource.fix_issues_portal_url`.
 3. Use `PATCH /api/intake/:uid` to write user-confirmed answers, or to write estimated homeowners values plus matching `field_estimates` rows when your own context can defensibly fill them.
 4. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. At that point, render one review step or hand the user to `resource.fix_issues_request_login_url` so Coverage Cat's GUI can handle the same review.
-5. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the browser handoff at `/intake`.
+5. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
 
 ### Path 2: Operator-partner delegated flow
 
@@ -64,17 +82,19 @@ Use this only when a direct-homeowner assistant already has approved access to C
 ## Goal
 
 1. Search approved operator-side context first and assemble the fullest homeowners application you can before involving the human.
-2. Send non-user-confirmed home values in `intake.home[]` with matching `field_estimates[]` rows so Coverage Cat can preserve provenance and mark them for later review.
-3. Keep `needs_more_info` behind the scenes when you can. The intended UX is a single review-and-consent handoff, not a long questionnaire.
-4. Withhold `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly said yes to a soft credit pull.
-5. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
-6. Once offers are ready, summarize them clearly and hand the homeowner to Coverage Cat's secure portal for final selection, estimated-field confirmation, and bind.
-7. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
+2. On the consumer-prefill path, do the same with the user's own vault, prior messages, and connected files before you ask a single question.
+3. Send non-user-confirmed home values in `intake.home[]` with matching `field_estimates[]` rows so Coverage Cat can preserve provenance and mark them for later review.
+4. Keep `needs_more_info` behind the scenes when you can. The intended UX is a single review-and-consent handoff, not a long questionnaire.
+5. Withhold `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly said yes to a soft credit pull.
+6. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
+7. Once offers are ready, summarize them clearly and hand the homeowner to Coverage Cat's secure portal for final selection, estimated-field confirmation, and bind.
+8. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
 
 ## Conversation Rules
 
 - Lead with a compact framing statement such as: "I can gather your homeowners application, confirm it with you once, and then keep checking for quotes."
-- Reuse known facts and search allowed operator-side sources before asking the human anything: CRM records, loan files, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
+- Pick the path first. Use the consumer-prefill handoff when no operator bearer key is present, and use the delegated operator loop only when a real key is already available.
+- Reuse known facts and search the available context before asking the human anything: user-controlled vaults, prior messages, connected files, CRM records, loan files, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Do not set `credit_check_authorized` to `true` until the real homeowner has reviewed the assembled application and explicitly answered yes to the soft-credit prompt.
 - If Coverage Cat is only missing `credit_check_authorized`, render a single review step: put the soft-credit explanation and consent prompt first, then show the current application summary or JSON below it.
@@ -86,7 +106,7 @@ Use this only when a direct-homeowner assistant already has approved access to C
 
 Call `POST /api/agent/homeowners/quotes`.
 
-This endpoint is only for Path 2, the operator-partner delegated loop. Do not use it for the direct homeowner handoff.
+This endpoint is only for Path 2, the operator-partner delegated loop. Do not use it for the consumer-prefill handoff.
 
 This is the primary endpoint for the full delegated homeowners loop:
 
