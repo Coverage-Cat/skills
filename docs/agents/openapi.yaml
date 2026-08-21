@@ -3456,10 +3456,8 @@ paths:
       x-openai-isConsequential: true
   /api/agent/umbrella/status:
     post:
-      description: |-
-        Returns the current chat-manageable state for the delegated umbrella session, including quote selection, bind-stage follow-up questions, declarations-upload, declarations-review, payment, waiting-on-carrier, info-requested, blocked, and bound states. Chosen and waiting responses may include `offers_url` so the user can review the selected offer on Coverage Cat without leaving the normal workflow. If the session is back at `ready_for_review`, render the same single consent-plus-review page described on the draft endpoint. When `documents_pending_review` includes `poll_after_seconds`, wait that long before polling again unless the user asks for an update sooner. Sandbox delegated umbrella sessions use this endpoint to rehearse the mocked draft/review/quote loop after offers are returned.
-
-        PaymentTransition: follow `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns a secure `payment_url`.
+      description: |
+        Returns the current chat-manageable state for the delegated umbrella session, including quote selection, bind-stage follow-up questions, declarations-upload, declarations-review, payment, waiting-on-carrier, info-requested, blocked, and bound states. Chosen and waiting responses may include `offers_url` so the user can review the selected offer on Coverage Cat without leaving the normal workflow. If the session is back at `ready_for_review`, render the same single consent-plus-review page described on the draft endpoint. When `documents_pending_review` includes `poll_after_seconds`, wait that long before polling again unless the user asks for an update sooner. PaymentTransition: follow `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns a secure `payment_url`. Sandbox delegated umbrella sessions use this endpoint to rehearse the mocked draft/review/quote loop after offers are returned.
       operationId: get_delegated_umbrella_status
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -3653,6 +3651,25 @@ paths:
               $ref: '#/components/headers/RetryAfter'
             X-Skill-Version:
               $ref: '#/components/headers/SkillVersion'
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Coverage Cat could not prepare the consumer homeowners handoff.
+          headers:
+            Coverage-Cat-API-Version:
+              $ref: '#/components/headers/CoverageCatApiVersion'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Skill-Version:
+              $ref: '#/components/headers/SkillVersion'
       summary: Create a consumer-prefill homeowners handoff.
       x-openai-isConsequential: true
   /api/consumer/status:
@@ -3765,6 +3782,25 @@ paths:
               $ref: '#/components/headers/RetryAfter'
             X-Skill-Version:
               $ref: '#/components/headers/SkillVersion'
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Coverage Cat could not read the consumer handoff status.
+          headers:
+            Coverage-Cat-API-Version:
+              $ref: '#/components/headers/CoverageCatApiVersion'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Skill-Version:
+              $ref: '#/components/headers/SkillVersion'
       summary: Poll coarse public consumer handoff status.
       x-openai-isConsequential: false
   /api/consumer/umbrella/prefill:
@@ -3838,6 +3874,25 @@ paths:
               $ref: '#/components/headers/RateLimitReset'
             Retry-After:
               $ref: '#/components/headers/RetryAfter'
+            X-Skill-Version:
+              $ref: '#/components/headers/SkillVersion'
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Coverage Cat could not prepare the consumer umbrella handoff.
+          headers:
+            Coverage-Cat-API-Version:
+              $ref: '#/components/headers/CoverageCatApiVersion'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
             X-Skill-Version:
               $ref: '#/components/headers/SkillVersion'
       summary: Create a consumer-prefill umbrella handoff.
