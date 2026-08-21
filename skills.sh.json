@@ -4,7 +4,7 @@
   "groupings": [
     {
       "title": "Coverage Cat Purchase Workflows",
-      "description": "Delegated umbrella quoting plus direct or delegated homeowners purchase flows.",
+      "description": "Consumer-prefill or delegated umbrella and homeowners purchase flows.",
       "skills": [
         "coverage-cat-umbrella-purchase",
         "coverage-cat-homeowners-purchase"

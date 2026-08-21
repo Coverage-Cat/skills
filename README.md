@@ -33,6 +33,7 @@ These remain available for existing installs and prompts:
 - Developer portal: `https://www.coveragecat.com/developers`
 - Discovery JSON: `https://www.coveragecat.com/api/agent`
 - OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
+- Skills hub: `https://www.coveragecat.com/ai/skills`
 
 ## Source of truth
 

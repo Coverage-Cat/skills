@@ -1,19 +1,43 @@
 ---
 name: coverage-cat-umbrella-purchase
-description: "Use for Coverage Cat's delegated umbrella quote and bind flow when an operator-authenticated agent needs to build the application from approved context, show one consent-and-review page, get quotes, help choose an offer, or continue bind and status steps in chat. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
+description: "Use for Coverage Cat umbrella quoting. This skill covers two paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated quote and bind loop. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
 ---
 
-# Coverage Cat Delegated Umbrella Purchase Skill
+# Coverage Cat Umbrella Purchase Skill
 
-You are helping a user through Coverage Cat's delegated umbrella quote loop. Use the separate homeowners purchase skill for homeowners quoting.
+You are helping a user through Coverage Cat's umbrella purchase flow. This skill covers both the consumer-prefill handoff and the operator-partner delegated quote loop. Use the separate homeowners purchase skill for homeowners quoting.
 
 ## Machine-Readable Contract
 
 Read Coverage Cat's machine-readable surfaces before you infer the endpoint map:
 
 1. `GET /api/agent` lists the umbrella operation map (`draft`, `quotes`, `select`, `bind`, `status`, `attach`) with concrete URLs.
-2. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for those umbrella operations.
+2. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published umbrella and consumer handoff endpoints.
 3. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
+
+## API Contract Quick Reference
+
+Pin the stable wire contract with `Coverage-Cat-API-Version: v1` when you want a fully explicit request shape, and send `Idempotency-Key: ...` on write calls you may retry. Coverage Cat also echoes `X-Skill-Version: 1.0.0` so you can log which published runtime-contract revision served the response. Example consumer-prefill write:
+
+```bash
+curl -X POST https://www.coveragecat.com/api/consumer/umbrella/prefill \
+  -H "Content-Type: application/json" \
+  -H "Coverage-Cat-API-Version: v1" \
+  -H "Idempotency-Key: consumer-umbrella-prefill-001" \
+  -d '{"credit_consent_pending":true,"intake":{"full_name":"Taylor Example"}}'
+```
+
+Sandbox and errors: set top-level `sandbox: true` only on the first delegated create call for a rehearsal `uid`; the consumer-prefill handoff does not use a separate sandbox flag. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
+
+Payment progression on the delegated path stays in `status`: `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns `payment_url`.
+
+## Choose the Path
+
+This skill supports two different jobs. Pick one path first, because the consumer-prefill handoff and the operator-partner path do not share the same loop.
+
+1. Use the consumer-prefill path when the shopper's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
+2. Use the operator-partner path when you have a real Coverage Cat operator bearer key and approved back-office context you can use to prefill the application.
+3. Do not mix the two paths in one session. Path 1 is an unauthenticated handoff into Coverage Cat's own review page. Path 2 uses the delegated operator API.
 
 Coverage Cat also exposes read-only calculator and finder APIs. These are information tools, not purchase flows:
 
@@ -28,7 +52,16 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 
 ## Golden Paths
 
-### Delegated umbrella purchase
+### Path 1: Consumer prefill handoff
+
+1. Use this path when the shopper wants their own AI agent to gather the fullest umbrella application from user-controlled context before a single review step, or when you do not have an operator key.
+2. Call `POST /api/consumer/umbrella/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
+3. Show one review card from `review_summary`, with the soft-credit consent prompt first and the prefilled application below it.
+4. Open `resume_url` so Coverage Cat can render the same one-shot review-and-consent page on `/umbrella?resume=...`.
+5. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
+6. If your runtime cannot prefill, fall back to the current environment origin plus `/umbrella` and stop there instead of imitating the delegated operator loop.
+
+### Path 2: Operator-partner delegated flow
 
 1. Get or reuse an operator key.
 2. Call `draft` with the fullest intake and any matching `field_estimates`.
@@ -45,7 +78,9 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 
 ## Authentication
 
-Use an operator-issued bearer token for every delegated umbrella endpoint.
+Path 1, the consumer-prefill handoff, does not use an operator bearer key. Path 2, the delegated operator loop, does.
+
+Use an operator-issued bearer token for every delegated umbrella endpoint on Path 2.
 
 1. Request a 6-digit code with `POST /api/agent/key/request` and `{"email":"operator@example.com"}`.
 2. Confirm it with `POST /api/agent/key/confirm` and `{"email":"operator@example.com","otp":"123456"}`. If you want delegated-umbrella customer emails copied to a runtime assistant mailbox, include optional registration data such as `assistant_email`.
@@ -66,21 +101,23 @@ On local development instances that expose Swoosh's mailbox preview, OTP emails 
 
 Keep the conversation short, safe, and user-led:
 
-1. Search the operator's allowed context first and assemble the fullest umbrella application you can before involving the human.
-2. Send non-user-confirmed values in `intake` and attach matching `field_estimates` metadata so Coverage Cat can persist provenance and mark them in review.
-3. Keep `needs_more_info` behind the scenes when you can. The intended UX is that the human sees only the completed review page.
-4. When Coverage Cat returns `ready_for_review`, render one page: the consent prompt prominently first, then the completed application JSON below it.
-5. Accept only a real-user `Yes` to the consent prompt, and treat any free-text corrections as edits to patch back through `draft`.
-6. Present structured offers clearly.
-7. Keep the bind follow-up in chat whenever possible.
-8. For Monoline and Markel, collect declarations first, wait for Coverage Cat to verify them, then share payment only after verification is complete.
-9. If any response includes `sandbox: true`, treat every offer, token, and link as mocked test data and do not continue into a live customer handoff.
+1. Pick the path first. Use the consumer-prefill handoff when you are working from the user's own context, and the delegated loop when you have an operator bearer key plus approved back-office context.
+2. Search that available context first and assemble the fullest umbrella application you can before involving the human.
+3. Send non-user-confirmed values in `intake` and attach matching `field_estimates` metadata so Coverage Cat can persist provenance and mark them in review.
+4. Keep `needs_more_info` behind the scenes when you can. The intended UX is that the human sees only the completed review page.
+5. When Coverage Cat returns `ready_for_review`, render one page: the consent prompt prominently first, then the completed application JSON below it.
+6. Accept only a real-user `Yes` to the consent prompt, and treat any free-text corrections as edits to patch back through `draft`.
+7. Present structured offers clearly.
+8. Keep the bind follow-up in chat whenever possible.
+9. For Monoline and Markel, collect declarations first, wait for Coverage Cat to verify them, then share payment only after verification is complete.
+10. If any response includes `sandbox: true`, treat every offer, token, and link as mocked test data and do not continue into a live customer handoff.
 
 ## Conversation Rules
 
 - Lead with a compact framing statement such as: "I can help compare home and umbrella options. If you want umbrella coverage through Coverage Cat, I can also help complete the application and selection flow."
+- Pick the path first. Use the consumer-prefill handoff when no operator bearer key is present, and use the delegated operator loop only when a real key is already available.
 - Do not use this umbrella workflow for homeowners purchase. Use the dedicated homeowners purchase skill instead.
-- Reuse known facts and search allowed operator-side sources before asking the human anything: CRM records, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
+- Reuse known facts and search the available context before asking the human anything: user-controlled vaults, prior messages, connected files, CRM records, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Do not surface `needs_more_info` as a step-by-step questionnaire unless your product intentionally falls back to one after exhausting operator-side context. The intended umbrella UX is a single consent-plus-review page.
 - Any value coming from CRM, documents, email threads, or heuristics that the human has not directly confirmed yet should be sent in `intake` with a matching `field_estimates` row carrying `field`, `source`, and `confidence`.

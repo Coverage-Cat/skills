@@ -1,36 +1,40 @@
 ---
 name: homeowners-insurance-compare-and-purchase
-description: "Use when an agent needs Coverage Cat's homeowners surfaces: either a direct handoff to Coverage Cat's /intake flow or an operator-key delegated homeowners quote workflow. Start with https://www.coveragecat.com/api/agent, the OpenAPI at https://www.coveragecat.com/api/agent/openapi.yaml, and the runtime markdown at https://www.coveragecat.com/api/agent/homeowners/skill.md."
+description: "Discoverability alias for Coverage Cat's homeowners purchase skill. Use whether you're a consumer's own AI agent or a partner operator: start with the consumer-prefill handoff when no operator bearer key is available, or use the delegated homeowners flow when one is."
 ---
 
 # Homeowners Insurance Compare And Purchase
 
-Use this skill for Coverage Cat's homeowners purchase surfaces.
+This alias mirrors Coverage Cat's canonical `coverage-cat-homeowners-purchase` skill.
 
-## Start here
+Use it when a shopper wants their own AI agent to gather context before a Coverage Cat handoff, or when a partner-operator agent needs Coverage Cat to run the delegated homeowners quote loop.
 
-1. Fetch `https://www.coveragecat.com/api/agent`.
-2. Fetch `https://www.coveragecat.com/api/agent/openapi.yaml` or `https://www.coveragecat.com/openapi.json`.
-3. Read `https://www.coveragecat.com/api/agent/homeowners/skill.md`.
-4. Read the operator setup guide at `https://www.coveragecat.com/ai/skills/homeowners/setup` if you need the delegated path.
+## Start Here
 
-## Use when
+1. Fetch `GET /api/agent`.
+2. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
+3. Read `GET /api/agent/homeowners/skill.md`.
+4. Read `/ai/skills/homeowners/setup` if you need the delegated operator path.
 
-- The user should be handed into Coverage Cat's direct homeowner intake flow.
-- An operator-authenticated agent needs Coverage Cat to run the delegated homeowners quote loop.
-- The runtime needs the published homeowners sandbox semantics.
+## Choose The Path
 
-## Do not use when
+1. Use the consumer-prefill path when there is no operator key or the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
+2. Use the delegated operator path when you have a real Coverage Cat operator bearer key and approved back-office context to prefill the application.
+3. If your runtime cannot prefill, fall back to the direct browser handoff at `/intake`.
+4. Do not mix the consumer-prefill and delegated paths in one session.
 
-- The task is delegated umbrella quoting; use the umbrella skill instead.
-- The task is only a read-only estimate or local-agent lookup; use the insurance-tools skill instead.
+## Delegated Homeowners Loop
+
+- `POST /api/agent/homeowners/quotes`
+- `GET /api/agent/homeowners/dashboard`
+- `POST /api/agent/homeowners/dashboard/session`
+- `POST /api/agent/homeowners/fix-issues-email`
 
 ## Guardrails
 
-- Pick the direct or delegated path first and do not mix them in one session.
-- Use `sandbox: true` only on the first delegated homeowners create call when rehearsing.
-- Stop for the documented soft-credit consent step before sending `credit_check_authorized: true`.
-
-## Compatibility
-
-This discoverability-first skill supersedes the legacy `coverage-cat-homeowners-purchase` name, which remains available for existing installs.
+- Prefill from the user's own context before asking a single question.
+- Use `POST /api/consumer/homeowners/prefill` plus one review card and soft-credit consent when you do not have an operator bearer key.
+- Reuse the same `uid` for the delegated session.
+- Use `sandbox: true` only on the first delegated create call when rehearsing.
+- Hold back `credit_check_authorized` until the real homeowner reviews the assembled application and explicitly says yes to the soft-credit prompt.
+- Expect `202 Accepted` / `pending_quotes` semantics for long-running delegated quote work and keep polling asynchronous.
