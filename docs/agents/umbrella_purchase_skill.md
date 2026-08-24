@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-umbrella-purchase
-description: "Use for Coverage Cat umbrella quoting. This skill covers two paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated quote and bind loop. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
+description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated quote and bind loop. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
 ---
 
 # Coverage Cat Umbrella Purchase Skill
@@ -60,6 +60,16 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 4. Open `resume_url` so Coverage Cat can render the same one-shot review-and-consent page on `/umbrella?resume=...`.
 5. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
 6. If your runtime cannot prefill, fall back to the current environment origin plus `/umbrella` and stop there instead of imitating the delegated operator loop.
+
+#### Optional first-party follow-up API for Path 1
+
+Use this only when a direct user-facing assistant already has approved access to Coverage Cat's intake bearer token and a real intake `uid`.
+
+1. Call `GET /api/intake/:uid/issues` to inspect what still blocks submission, any `pending_fields`, any estimated `field_estimates`, and the final `review` JSON once the intake is ready.
+2. Use `PATCH /api/intake/:uid` to write user-confirmed answers, or to write inferred umbrella values plus matching top-level `field_estimates[]` rows naming the same intake dot-path plus source and confidence.
+3. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. The intended UX is that the user sees one final review-and-consent step, not a questionnaire.
+4. On that single review turn, show `resource.credit_consent_question` first, render `resource.review` below it, collect any corrections, and then send one final `PATCH /api/intake/:uid` with `credit_check_authorized: true` and `confirm_submission: true`.
+5. After submit, continue polling `GET /api/consumer/status?token=...` with the original `polling_token`, or keep reading `GET /api/intake/:uid/issues` for the same uid if your bearer-backed runtime already has that access.
 
 ### Path 2: Operator-partner delegated flow
 

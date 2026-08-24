@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-homeowners-purchase
-description: "Use for Coverage Cat homeowners quoting. This skill covers two paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated loop that fills the application from approved CRM, loan, prior-session, email, or policy context, gets one review plus soft-credit consent, submits, then checks for quotes."
+description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two homeowners paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated loop that fills the application from approved CRM, loan, prior-session, email, or policy context, gets one review plus soft-credit consent, submits, then checks for quotes."
 ---
 
 # Coverage Cat Homeowners Purchase Skill
@@ -59,14 +59,15 @@ Use this only when a direct-homeowner assistant already has approved access to C
 2. Read the returned payload under `resource`. The important fields are `resource.status`, `resource.missing_fields`, `resource.review_estimates`, `resource.fix_issues_request_login_url`, and the sensitive direct session link `resource.fix_issues_portal_url`.
 3. Use `PATCH /api/intake/:uid` to write user-confirmed answers, or to write estimated homeowners values plus matching `field_estimates` rows when your own context can defensibly fill them.
 4. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. At that point, render one review step or hand the user to `resource.fix_issues_request_login_url` so Coverage Cat's GUI can handle the same review.
-5. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
+5. On that one review turn, collect any corrections plus the real homeowner's soft-credit consent, then send one final `PATCH /api/intake/:uid` with `confirm_submission: true`. For most successful consumer-prefill handoffs, that last patch only needs `credit_check_authorized: true`.
+6. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
 
 ### Path 2: Operator-partner delegated flow
 
 1. Start with the fullest intake you can build from approved operator-side context.
-2. Reuse one `uid` through the whole lifecycle, and keep filling `missing_fields` from your own systems first.
+2. Reuse one `uid` through the whole lifecycle, and keep filling `missing_fields` from your own systems first. The target is 2-3 turns total including the final homeowner consent-submit turn, not a questionnaire.
 3. If you are rehearsing the flow, set top-level `sandbox: true` on the very first create call only. That `uid` stays sandbox-scoped, the first fully complete submit with explicit credit consent returns `pending_quotes`, and a later poll returns mocked offers without live customer email or carrier traffic.
-4. Hold back `credit_check_authorized` until the real homeowner reviews the assembled application and says yes to the soft-credit prompt.
+4. Hold back `credit_check_authorized` until the real homeowner reviews the assembled application and says yes to the soft-credit prompt. If you still see non-credit missing fields, keep enriching from approved context instead of bouncing them back to the homeowner.
 5. After the first fully complete submit with explicit credit consent, expect `pending_quotes`, then poll the same `uid` or use the operator dashboard APIs.
 6. If the delegated intake still needs fixes, use `homeowner_fix_issues_request_login_url` or `POST /api/agent/homeowners/fix-issues-email` to hand the homeowner back to Coverage Cat's GUI without exposing a direct session URL.
 7. When offers are ready, summarize them and hand the homeowner to Coverage Cat with the safe sign-in request link for final selection and bind.
