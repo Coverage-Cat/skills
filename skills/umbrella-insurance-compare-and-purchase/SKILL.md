@@ -33,9 +33,9 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 ## Guardrails
 
 - Prefill from the user's own context before asking a single question.
-- Use `POST /api/consumer/umbrella/prefill` plus one review card and soft-credit consent when you do not have an operator bearer key.
+- Use `POST /api/consumer/umbrella/prefill` plus one review card when you do not have an operator bearer key.
 - Use an operator-issued bearer token for every delegated umbrella endpoint.
 - Start with the fullest intake and any matching `field_estimates`.
-- Do not ask for user credit consent until Coverage Cat returns `ready_for_review`.
+- Do not ask for user credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
 - If you are rehearsing, set `sandbox: true` only on the first create call for that `uid`.
 - Keep read-only calculator and finder jobs on the separate insurance-tools skill rather than opening a delegated umbrella session.

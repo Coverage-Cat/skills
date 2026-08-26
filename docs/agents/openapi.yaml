@@ -5,10 +5,12 @@ info:
   x-skill-version: 1.0.0
   description: >
     Delegated-agent APIs for Coverage Cat purchase workflows and read-only
-    insurance tools. Umbrella delegated purchase is a consent-first,
-    one-review-page flow: the operator-side agent fills the application from
-    allowed context, Coverage Cat returns estimated-field metadata, and the
-    human only reviews or corrects the final JSON plus credit consent.
+    insurance tools. Umbrella delegated purchase is a one-review-page flow:
+    the operator-side agent fills the application from allowed context,
+    Coverage Cat returns estimated-field metadata, and the human only
+    reviews or corrects the final JSON before preliminary quotes are
+    generated. Credit consent is collected after the user chooses an offer,
+    at the `select` step, before Coverage Cat can bind.
     Homeowners delegated purchase is a near-single-endpoint operator flow:
     gather the fullest approved-context application first, mark non-user-
     confirmed home values with `field_estimates`, hold back
@@ -17,9 +19,10 @@ info:
     then let Coverage Cat submit and quote the intake asynchronously and
     route the homeowner back through portal review for any remaining
     estimated home answers before final bind. Coverage Cat also exposes a
-    first-party follow-up API at `/api/intake/{uid}/issues` and
-    `PATCH /api/intake/{uid}` for consumer-prefill umbrella and homeowners
-    runtimes that already have an intake bearer token; use
+    consumer follow-up API at `/api/intake/{uid}/issues` and
+    `PATCH /api/intake/{uid}` for umbrella and homeowners consumer-prefill
+    handoffs; authenticate those follow-up calls with the short-lived
+    `intake_access_token` returned by the consumer-prefill response, and use
     `confirm_submission: true` on the single final review turn to submit.
 servers:
   - url: https://www.coveragecat.com
@@ -105,7 +108,7 @@ components:
       description: >
         One umbrella field whose current value is still estimated rather than
         directly user-confirmed. Use `review_path` to mark the same value in
-        the `review` JSON when rendering the single consent-plus-review page.
+        the `review` JSON when rendering the single review page.
       properties:
         field:
           type: string
@@ -274,19 +277,13 @@ components:
           type: object
           description: >
             Full review JSON to render only when `status` is
-            `ready_for_review`. Show the `credit_consent_question` prominently
-            first, then render this JSON below it and visually mark every
-            `field_estimates[].review_path` entry as estimated.
+            `ready_for_review`. Render it directly and visually mark every
+            `field_estimates[].review_path` entry as estimated. Credit consent
+            is not asked here; Coverage Cat collects it at `select`.
           additionalProperties: true
         review_token:
           type: string
           description: Token bound to the latest review JSON. Refresh it after every draft edit before calling quotes.
-        credit_consent_question:
-          type: string
-          description: >
-            Blocking consent prompt to render at the top of the single review
-            page. The real user must personally answer Yes before quotes can be
-            requested.
         field_estimates:
           type: array
           items:
@@ -302,7 +299,6 @@ components:
         - uid
         - review_token
         - review_confirmed
-        - credit_consent
       properties:
         uid:
           type: string
@@ -318,20 +314,6 @@ components:
         review_confirmed:
           type: boolean
           const: true
-        credit_consent:
-          type: object
-          additionalProperties: false
-          required:
-            - answer
-            - collected_from_user
-          properties:
-            answer:
-              type: string
-              description: Must be the real user's answer. Only Yes is accepted.
-              enum: [Yes]
-            collected_from_user:
-              type: boolean
-              const: true
     AgentOffer:
       type: object
       properties:
@@ -447,6 +429,24 @@ components:
         selection_confirmed:
           type: boolean
           const: true
+        credit_consent:
+          type: object
+          description: >
+            Real-user soft-credit consent. Required before Coverage Cat can bind
+            a chosen offer. If omitted or declined, Coverage Cat returns
+            `credit_consent_required` with the prompt to render.
+          additionalProperties: false
+          required:
+            - answer
+            - collected_from_user
+          properties:
+            answer:
+              type: string
+              description: Must be the real user's answer. Only Yes authorizes the pull.
+              enum: [Yes]
+            collected_from_user:
+              type: boolean
+              const: true
     FallbackStep:
       type: object
       properties:
@@ -474,9 +474,15 @@ components:
         status:
           type: string
           enum:
-            [needs_more_info_to_bind, documents_needed, documents_pending_review, payment_needed, chosen]
+            [credit_consent_required, needs_more_info_to_bind, documents_needed, documents_pending_review, payment_needed, chosen]
         response_summary:
           type: string
+        credit_consent_question:
+          type: string
+          description: >
+            Present only when `status` is `credit_consent_required`. The real
+            user's affirmative Yes must be collected and passed back on the
+            next `select` call as `credit_consent`.
         offers_url:
           type: string
           format: uri
@@ -621,6 +627,10 @@ components:
           type: string
         credit_consent_question:
           type: string
+          description: >
+            Present when Coverage Cat needs the real user's soft-credit consent
+            before binding an offer, typically returned from `select` with
+            `status: credit_consent_required`.
         field_estimates:
           type: array
           items:
@@ -1588,7 +1598,7 @@ paths:
     post:
       operationId: prepare_delegated_umbrella_application
       x-openai-isConsequential: false
-      summary: Create or update a delegated umbrella session, continue hidden enrichment, and return the single consent-plus-review page when ready.
+      summary: Create or update a delegated umbrella session, continue hidden enrichment, and return the single review page when ready.
       description: >
         Use this endpoint as the primary operator-side enrichment loop. Search
         allowed context sources first and send the fullest application you can,
@@ -1599,11 +1609,12 @@ paths:
         falls back to one. If you exhaust approved context and still cannot
         reach `ready_for_review`, stop and escalate rather than silently
         presenting a partial review page. If `status` is `ready_for_review`,
-        render a single page with the `credit_consent_question` prominently
-        first and the formatted `review` JSON directly below it, marking the
-        `field_estimates` paths as estimated. Set `sandbox: true` only on the
-        first create call when you want mocked delegated umbrella test data
-        instead of live customer email or carrier traffic.
+        render the formatted `review` JSON with `field_estimates` paths marked
+        as estimated. Preliminary umbrella quotes do not require credit
+        consent; Coverage Cat collects the soft-credit pull authorization at
+        `select`. Set `sandbox: true` only on the first create call when you
+        want mocked delegated umbrella test data instead of live customer
+        email or carrier traffic.
       requestBody:
         required: true
         content:
@@ -1634,16 +1645,17 @@ paths:
     post:
       operationId: quote_delegated_umbrella_application
       x-openai-isConsequential: true
-      summary: Confirm the consent-plus-review page, capture explicit credit authorization, and return offers.
+      summary: Confirm the review page and return preliminary offers.
       description: >
-        Only call this after the user has reviewed the latest review JSON,
-        approved or corrected any estimated values, and personally answered Yes
-        to the credit-consent question shown at the top of that page. If the
-        review token is stale or the application changed, go back to the draft
-        step and obtain a fresh review token. Once a session has moved into
-        bind or post-select checkout, do not replay an old review token
-        through this endpoint. Sandbox sessions return mocked quote data and
-        stop at the `status` endpoint rather than continuing into select/bind.
+        Only call this after the user has reviewed the latest review JSON and
+        approved or corrected any estimated values. Preliminary umbrella
+        quotes do not require credit consent; Coverage Cat collects the
+        soft-credit pull authorization at `select`. If the review token is
+        stale or the application changed, go back to the draft step and
+        obtain a fresh review token. Once a session has moved into bind or
+        post-select checkout, do not replay an old review token through this
+        endpoint. Sandbox sessions return mocked quote data and stop at the
+        `status` endpoint rather than continuing into select/bind.
       requestBody:
         required: true
         content:
@@ -1658,7 +1670,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/QuoteResponse'
         "400":
-          description: Missing confirmation or malformed credit-consent payload.
+          description: Missing confirmation or malformed request.
           content:
             application/json:
               schema:
@@ -1680,9 +1692,13 @@ paths:
     post:
       operationId: select_delegated_umbrella_offer
       x-openai-isConsequential: true
-      summary: Confirm the user's selection and start the chat-native bind continuation flow.
+      summary: Confirm the user's selection, capture credit consent, and start the chat-native bind continuation flow.
       description: >
-        Pass the selected `selection_token` and a final user confirmation.
+        Pass the selected `selection_token`, a final user confirmation, and the
+        `credit_consent` block collected from the real user. Coverage Cat
+        requires the affirmative Yes to the soft-credit pull before binding a
+        chosen offer; if it is missing or declined the response is
+        `credit_consent_required` with the prompt to render. Otherwise
         Coverage Cat will either return the next bind-stage `next_question` to
         keep collecting required details in chat, or it will continue the
         standard post-choose workflow and tell the agent to keep polling
@@ -1866,7 +1882,7 @@ paths:
         info-requested, blocked, and bound states. Chosen and waiting responses
         may include `offers_url` so the user can review the selected offer on
         Coverage Cat without leaving the normal workflow. If the session is
-        back at `ready_for_review`, render the same single consent-plus-review
+        back at `ready_for_review`, render the same single review
         page described on the draft endpoint. When
         `documents_pending_review` includes `poll_after_seconds`, wait that
         long before polling again unless the user asks for an update sooner.
