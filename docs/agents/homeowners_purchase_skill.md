@@ -13,7 +13,7 @@ Read the discovery and schema surfaces before you start guessing endpoint names 
 
 1. `GET /api/agent` lists the umbrella and homeowners operation maps, including the delegated homeowners fix-issues email endpoint and the direct-intake follow-up URL templates.
 2. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published homeowners and consumer handoff endpoints.
-3. The direct-homeowner follow-up API lives under `/api/intake/:uid/...` and is described in this skill even though it is not part of the delegated operator loop.
+3. The direct-homeowner follow-up API lives under `/api/intake/:uid/...` and uses the short-lived `intake_access_token` returned by consumer prefill.
 
 ## API Contract Quick Reference
 
@@ -37,7 +37,7 @@ This skill supports two different jobs. Pick one path first, because the consume
 
 1. Use the consumer-prefill path when the homeowner's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
 2. Use the operator-partner path when you have a real Coverage Cat operator key and approved back-office context you can use to prefill the application.
-3. Do not mix the two paths in one session. Path 1 is an unauthenticated handoff into Coverage Cat's own review page and then its normal `/intake` and portal flow. Path 2 uses the delegated API and dashboard.
+3. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated API and dashboard.
 
 ## Golden Paths
 
@@ -45,22 +45,24 @@ This skill supports two different jobs. Pick one path first, because the consume
 
 1. Use this path when the shopper wants their own AI agent to gather the fullest homeowners application from user-controlled context before a single review step, or when you do not have an operator key.
 2. Call `POST /api/consumer/homeowners/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
-3. Show one review card from `review_summary`, with the soft-credit consent prompt first and the prefilled application below it.
-4. Open `resume_url` so Coverage Cat can render the same one-shot review-and-consent page on `/intake?resume=...`.
-5. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
-6. If your runtime cannot prefill, fall back to the current environment origin plus `/intake`. In production that is `https://www.coveragecat.com/intake`.
-7. If you need to rehearse the plain browser fallback, send the tester to the current environment origin plus `/intake?ltp=owned_homes&sandbox=homeowners`, use fake or test contact details, and expect mocked homeowners offers on the normal consumer offers page after submit. This browser sandbox does not need an operator key and does not send live customer email or carrier traffic.
+3. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Show one review card from `review_summary`, with the soft-credit consent prompt first and the prefilled application below it.
+4. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review or quote data.
+5. Use `resume_url` only as the browser fallback when your runtime cannot continue in chat or the user explicitly wants Coverage Cat's UI on `/intake?resume=...`.
+6. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
+7. If your runtime cannot prefill, fall back to the current environment origin plus `/intake`. In production that is `https://www.coveragecat.com/intake`.
+8. If you need to rehearse the plain browser fallback, send the tester to the current environment origin plus `/intake?ltp=owned_homes&sandbox=homeowners`, use fake or test contact details, and expect mocked homeowners offers on the normal consumer offers page after submit. This browser sandbox does not need an operator key and does not send live customer email or carrier traffic.
 
-#### Optional first-party follow-up API for Path 1
+#### Direct follow-up API for Path 1
 
-Use this only when a direct-homeowner assistant already has approved access to Coverage Cat's intake bearer token and a real intake `uid`.
+Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
-1. Call `GET /api/intake/:uid/issues` to inspect what still blocks submission, the returned schema hints, any estimated answers waiting for review, and the GUI handoff links.
+1. Call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` to inspect what still blocks submission, the returned schema hints, any estimated answers waiting for review, and the GUI handoff links.
 2. Read the returned payload under `resource`. The important fields are `resource.status`, `resource.missing_fields`, `resource.review_estimates`, `resource.fix_issues_request_login_url`, and the sensitive direct session link `resource.fix_issues_portal_url`.
-3. Use `PATCH /api/intake/:uid` to write user-confirmed answers, or to write estimated homeowners values plus matching `field_estimates` rows when your own context can defensibly fill them.
+3. Use `PATCH /api/intake/:uid` with that same bearer token to write user-confirmed answers, or to write estimated homeowners values plus matching `field_estimates` rows when your own context can defensibly fill them.
 4. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. At that point, render one review step or hand the user to `resource.fix_issues_request_login_url` so Coverage Cat's GUI can handle the same review.
 5. On that one review turn, collect any corrections plus the real homeowner's soft-credit consent, then send one final `PATCH /api/intake/:uid` with `confirm_submission: true`. For most successful consumer-prefill handoffs, that last patch only needs `credit_check_authorized: true`.
-6. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
+6. After submit, keep polling `GET /api/intake/:uid/issues` with the same bearer token until Coverage Cat returns structured homeowners quote review data or the user needs the browser handoff.
+7. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
 
 ### Path 2: Operator-partner delegated flow
 
@@ -74,9 +76,10 @@ Use this only when a direct-homeowner assistant already has approved access to C
 
 ## Authentication
 
-- The operator must give you a real Coverage Cat operator API key ahead of time.
-- Send that key as `Authorization: Bearer <key>`.
-- Do not call Coverage Cat's OTP/key-issuance endpoints from inside the agent for this flow.
+- Path 1 starts unauthenticated at `POST /api/consumer/homeowners/prefill`, then reuses the returned `intake_access_token` as `Authorization: Bearer <intake_access_token>` on `/api/intake/:uid/...`.
+- Path 2 uses a real Coverage Cat operator API key that must be issued ahead of time.
+- Send that operator key as `Authorization: Bearer <key>`.
+- Do not call Coverage Cat's OTP/key-issuance endpoints from inside the agent for the delegated homeowners flow.
 - Shared environment keys are not accepted for the homeowners purchase endpoint.
 - Repeated invalid bearer-key attempts may return `429 too_many_attempts`. Honor the `Retry-After` header before retrying.
 
