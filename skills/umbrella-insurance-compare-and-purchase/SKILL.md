@@ -42,9 +42,10 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 ## Guardrails
 
 - Prefill from the user's own context before asking a single question.
-- Use `POST /api/consumer/umbrella/prefill` plus one review card when you do not have an operator bearer key.
-- Keep the user out of the loop until `GET /api/intake/:uid/issues` reaches `ready_for_submission`, or until that payload already carries a staged `review` plus bundled `next_question` for the shopper's final contact details.
-- On that staged review turn, ask for full name, email, and full address together rather than one field at a time, and let the user send corrections in the same reply.
+- On a cold start, call `POST /api/consumer/umbrella/prefill` before you ask the shopper a questionnaire. Send the fullest estimate you can justify from the shopper's own context first.
+- Keep the user out of the loop until `GET /api/intake/:uid/issues` reaches `ready_for_submission`, or until that payload already carries a staged `review` plus bundled `next_question` for the shopper-owned details Coverage Cat still needs.
+- On that staged review turn, ask for the shopper-owned bundle together rather than one field at a time. When Coverage Cat asks for full name, email, phone, full address, birthday, marital status, driver's license number, and net worth, keep that as one turn and let the user send corrections in the same reply.
+- If the shopper gives a birthday in normal US `MM-DD-YYYY` form, normalize it to `YYYY-MM-DD` before you patch Coverage Cat.
 - Keep the returned `uid` plus the freshest rotated `intake_access_token`, continue the direct `/api/intake/:uid/...` follow-up loop in chat, and use `resume_url` only as a browser fallback.
 - Use an operator-issued bearer token for every delegated umbrella endpoint.
 - Start with the fullest intake and any matching `field_estimates`.

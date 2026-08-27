@@ -421,7 +421,7 @@ components:
           type: string
         review_summary:
           additionalProperties: true
-          description: Current non-authoritative review payload the agent may summarize before continuing in chat or opening resume_url. On consumer umbrella handoffs, this may already include a staged `review` preview plus a bundled `next_question` for the final shopper contact details when Coverage Cat has enough shape information to avoid a step-by-step questionnaire.
+          description: Current non-authoritative review payload the agent may summarize before continuing in chat or opening resume_url. On consumer umbrella handoffs, this may already include a staged `review` preview plus a bundled `next_question` for the shopper-owned details Coverage Cat still needs before submission, such as full name, email, phone, full address, birthday, marital status, driver's license number, and net worth.
           type: object
         uid:
           description: Coverage Cat intake uid for the prefilled consumer handoff.
@@ -651,7 +651,8 @@ components:
         Cat can safely return at that stage. For consumer umbrella handoffs, Coverage
         Cat may keep `status: needs_more_info` while still returning a staged
         `review` preview plus a bundled `next_question` when the only remaining
-        shopper-owned gaps are the final contact details.
+        shopper-owned gaps fit Coverage Cat's one-time shopper-details review
+        turn.
       type: object
     UmbrellaFieldEstimateInput:
       additionalProperties: false
@@ -689,7 +690,7 @@ components:
         intake:
           additionalProperties: true
           description: |
-            Partial umbrella intake patch. Prefer sending the fullest context-backed application you can assemble from CRM, email threads, document drives, OCR'd policy files, and prior Coverage Cat sessions. Send only changed fields on follow-up calls instead of resubmitting the full application. Accepted aliases: `birthday -> age`, `spouse_birthday -> spouse_age`, `approximate_asset_value -> net_worth_numeric`. Send birthdays as ISO dates, not raw integer ages. Common keys include `full_name`, `email`, `phone_number`, `age`, `marital_status`, `license_status`, `license_state`, `license_number`, `address`, `occupation`, `line_of_work`, `net_worth_numeric`, `additional_drivers`, `household_members`, `auto_has_insurance`, `coverage_e_for_residences`, `has_citizens_home_coverage`, and `umbrella_details`.
+            Partial umbrella intake patch. Prefer sending the fullest context-backed application you can assemble from CRM, email threads, document drives, OCR'd policy files, and prior Coverage Cat sessions. Send only changed fields on follow-up calls instead of resubmitting the full application. Accepted aliases: `birthday -> age`, `spouse_birthday -> spouse_age`, `approximate_asset_value -> net_worth_numeric`. Send birthdays to Coverage Cat as ISO dates; if the shopper replies in normal US `MM-DD-YYYY` form, normalize it to ISO before sending. Do not send raw integer ages. Common keys include `full_name`, `email`, `phone_number`, `age`, `marital_status`, `license_status`, `license_state`, `license_number`, `address`, `occupation`, `line_of_work`, `net_worth_numeric`, `additional_drivers`, `household_members`, `auto_has_insurance`, `coverage_e_for_residences`, `has_citizens_home_coverage`, and `umbrella_details`.
           type: object
         sandbox:
           description: |
@@ -3914,7 +3915,7 @@ paths:
       x-openai-isConsequential: false
   /api/consumer/umbrella/prefill:
     post:
-      description: Accepts the fullest consumer umbrella application you can assemble, stores it at Coverage Cat's review checkpoint, and returns the handoff `uid`, a rotating `intake_access_token` for direct API follow-up, a short-lived `resume_url` browser fallback, and a coarse public `polling_token`. If the initial shape check still needs only the shopper's final contact details, Coverage Cat may return a staged `review_summary.review` plus a bundled `review_summary.next_question` so the assistant can ask for name, email, and full address in one turn instead of drifting into a field-by-field questionnaire. Successful direct follow-up responses rotate a fresh `intake_access_token`; always reuse the newest token you have. Credit consent is not required here — Coverage Cat collects the soft-credit pull authorization after the user chooses an offer.
+      description: Accepts the fullest consumer umbrella application or estimate you can assemble, stores it at Coverage Cat's review checkpoint, and returns the handoff `uid`, a rotating `intake_access_token` for direct API follow-up, a short-lived `resume_url` browser fallback, and a coarse public `polling_token`. On a cold start, call this before you question the shopper. Coverage Cat may return a staged `review_summary.review` plus a bundled `review_summary.next_question` so the assistant can collect the shopper-owned details it still needs, such as full name, email, phone, full address, birthday, marital status, driver's license number, net worth, and any corrections, in one turn instead of drifting into a field-by-field questionnaire. Successful direct follow-up responses rotate a fresh `intake_access_token`; always reuse the newest token you have. Credit consent is not required here — Coverage Cat collects the soft-credit pull authorization after the user chooses an offer.
       operationId: create_consumer_umbrella_prefill
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -4392,7 +4393,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}/issues:
     get:
-      description: 'Returns a line-aware follow-up payload for a consumer-prefill homeowners or umbrella intake uid. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Before submission, this exposes the one-time review checkpoint and any remaining missing or estimated values. For homeowners, treat those missing fields as a behind-the-scenes enrichment backlog rather than a first-turn questionnaire, and keep recovering context-backed answers until the payload is ready for one review card. For umbrella, if the only shopper-owned gaps left are the final contact details, Coverage Cat may return `status: needs_more_info` together with a staged `review` preview and a bundled `next_question` so the assistant can ask for full name, email, and full address in one message rather than one field at a time. After submission, it exposes quote progress, structured umbrella offers with `selection_token`, detailed post-choose umbrella states, and a refreshed `intake_access_token` for the next direct follow-up call.'
+      description: 'Returns a line-aware follow-up payload for a consumer-prefill homeowners or umbrella intake uid. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Before submission, this exposes the one-time review checkpoint and any remaining missing or estimated values. For homeowners, treat those missing fields as a behind-the-scenes enrichment backlog rather than a first-turn questionnaire, and keep recovering context-backed answers until the payload is ready for one review card. For umbrella, Coverage Cat may keep `status: needs_more_info` while still returning a staged `review` preview plus a bundled `next_question` for the final shopper-owned review turn, so the assistant can collect details such as full name, email, phone, full address, birthday, marital status, driver''s license number, net worth, and any corrections in one message rather than one field at a time. After submission, it exposes quote progress, structured umbrella offers with `selection_token`, detailed post-choose umbrella states, and a refreshed `intake_access_token` for the next direct follow-up call.'
       operationId: get_first_party_intake_issues
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
