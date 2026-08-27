@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-umbrella-purchase
-description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review page from the user's own context and returns preliminary quotes without upfront credit consent, and an operator-partner delegated quote and bind loop that collects credit consent at selection. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
+description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review page from the user's own context, keeps quote review and post-choose follow-up in chat through the direct intake API when possible, and returns preliminary quotes without upfront credit consent, and an operator-partner delegated quote and bind loop that collects credit consent at selection. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
 ---
 
 # Coverage Cat Umbrella Purchase Skill
@@ -29,6 +29,8 @@ curl -X POST https://www.coveragecat.com/api/consumer/umbrella/prefill \
 
 Sandbox and errors: set top-level `sandbox: true` only on the first delegated create call for a rehearsal `uid`; the consumer-prefill handoff does not use a separate sandbox flag. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
 
+Coverage Cat rotates a fresh `intake_access_token` in every successful direct follow-up response on the consumer-prefill path. Always reuse the newest token you have for the next `/api/intake/:uid/...` call.
+
 Payment progression on the delegated path stays in `status`: `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns `payment_url`.
 
 ## Choose the Path
@@ -56,8 +58,8 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 
 1. Use this path when the shopper wants their own AI agent to gather the fullest umbrella application from user-controlled context before a single review step, or when you do not have an operator key.
 2. Call `POST /api/consumer/umbrella/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
-3. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Show one review card from `review_summary` with the prefilled application.
-4. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review or quote data.
+3. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Treat `review_summary` as a checkpoint snapshot, not the final decision about whether the human needs to be interrupted yet. If it already includes a `review` preview plus a bundled `next_question` for shopper contact details, use that as the one review turn rather than falling back to a one-field questionnaire.
+4. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with the latest `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data.
 5. Use `resume_url` only as the browser fallback when your runtime cannot continue in chat or the user explicitly wants Coverage Cat's UI on `/umbrella?resume=...`.
 6. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
 7. If your runtime cannot prefill, fall back to the current environment origin plus `/umbrella` and stop there instead of imitating the delegated operator loop.
@@ -66,12 +68,16 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 
 Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
-1. Call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` to inspect what still blocks submission, any `pending_fields`, any estimated `field_estimates`, and the final `review` JSON once the intake is ready.
-2. Use `PATCH /api/intake/:uid` with that same bearer token to write user-confirmed answers, or to write inferred umbrella values plus matching top-level `field_estimates[]` rows naming the same intake dot-path plus source and confidence.
-3. Keep the human out of the loop until `resource.status` becomes `ready_for_submission`. The intended UX is that the user sees one final review step, not a questionnaire.
-4. On that single review turn, render `resource.review` and collect any corrections, then send one final `PATCH /api/intake/:uid` with `confirm_submission: true`. Preliminary umbrella quotes do not require credit consent; the soft-credit pull authorization is collected after the user chooses an offer.
-5. After submit, continue polling `GET /api/intake/:uid/issues` with the same bearer token. Once Coverage Cat has the first batch of quotes, this endpoint returns structured umbrella offers for pre-choose review in chat.
-6. Keep `GET /api/consumer/status?token=...` as the coarse fallback if you only need non-PII progress.
+1. Call `GET /api/intake/:uid/issues` with the latest `Authorization: Bearer <intake_access_token>` to inspect what still blocks submission, any `pending_fields`, any estimated `field_estimates`, and the final `review` JSON once the intake is ready. Every successful response rotates a fresh `intake_access_token`; replace the old one immediately.
+2. Use `PATCH /api/intake/:uid` with that same bearer token only for pre-submit review corrections, inferred umbrella values plus matching top-level `field_estimates[]` rows, and the final submit step. Do not overload this patch endpoint with offer selection or post-choose bind fields.
+3. Keep the human out of the loop until Coverage Cat has either reached `ready_for_submission` or returned a staged `review` preview plus a bundled `next_question` for the final shopper-owned contact details. If Coverage Cat still returns other `pending_fields` or a narrower `next_question`, keep filling them from user-controlled context or your own reasoning first. The intended UX is that the user sees one final completed review step, not a questionnaire.
+4. On that single review turn, render `resource.review`. If `next_question` is also present there, ask once for every shopper-owned field in it. When that bundle covers full name, email, and address, collect those together in the same message as any free-text corrections. If the user confirms the application in that same reply, send one final `PATCH /api/intake/:uid` carrying those edits plus `confirm_submission: true`. Preliminary umbrella quotes do not require credit consent; the soft-credit pull authorization is collected after the user chooses an offer.
+5. After submit, continue polling `GET /api/intake/:uid/issues` with the latest bearer token. Once Coverage Cat has the first batch of quotes, this endpoint returns structured umbrella offers for pre-choose review in chat, including per-offer `selection_token` values and detailed post-choose status payloads. Do not collapse that list down to only the recommended default offer when alternatives are present.
+6. When the user chooses an offer, call `POST /api/intake/:uid/select` with the latest bearer token, `selection_token`, `selection_confirmed: true`, and the real user's affirmative `credit_consent` only when Coverage Cat asks for it. Successful responses return detailed statuses such as `needs_more_info_to_bind`, `documents_needed`, `payment_needed`, `waiting_on_carrier`, or `bound`, plus a fresh token for the next follow-up call.
+7. If `select` or `issues` returns `needs_more_info_to_bind` or `ready_to_finalize`, call `POST /api/intake/:uid/bind` with the latest bearer token and only the current `next_question` fields inside `intake`. When the response says `ready_to_finalize`, call `bind` again with the same `uid` and no `intake` patch.
+8. If `select`, `bind`, or `issues` returns `documents_needed`, upload declarations through `POST /api/intake/:uid/attach` with the latest bearer token, `filename`, base64 `content`, and `type` in `declarations | auto_declarations`. Use `attach` only after selection and only when Coverage Cat explicitly asks for documents.
+9. If Coverage Cat returns `payment_needed`, share `payment_url` and let Coverage Cat's browser handle secure payment or carrier e-sign. Keep `GET /api/intake/:uid/issues` as the structured polling loop for declarations review, `waiting_on_carrier`, and `bound`.
+10. Keep `GET /api/consumer/status?token=...` as the coarse fallback if you only need non-PII progress.
 
 ### Path 2: Operator-partner delegated flow
 
@@ -90,7 +96,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
 ## Authentication
 
-Path 1, the consumer-prefill handoff, does not use an operator bearer key for the initial prefill call. Coverage Cat returns a short-lived `intake_access_token` that the agent should send back as `Authorization: Bearer <intake_access_token>` on `GET /api/intake/:uid/issues` and `PATCH /api/intake/:uid`. Path 2, the delegated operator loop, uses an operator bearer key.
+Path 1, the consumer-prefill handoff, does not use an operator bearer key for the initial prefill call. Coverage Cat returns a rotating `intake_access_token` that the agent should send back as `Authorization: Bearer <intake_access_token>` on `GET /api/intake/:uid/issues`, `PATCH /api/intake/:uid`, `POST /api/intake/:uid/select`, `POST /api/intake/:uid/bind`, and `POST /api/intake/:uid/attach`. Always reuse the newest token returned by the latest direct follow-up response. Path 2, the delegated operator loop, uses an operator bearer key.
 
 Use an operator-issued bearer token for every delegated umbrella endpoint on Path 2.
 
@@ -115,10 +121,10 @@ Keep the conversation short, safe, and user-led:
 
 1. Pick the path first. Use the consumer-prefill handoff when you are working from the user's own context, and the delegated loop when you have an operator bearer key plus approved back-office context.
 2. Search that available context first and assemble the fullest umbrella application you can before involving the human.
-3. Keep the returned `uid`, `intake_access_token`, and `polling_token` together; they are the full consumer handoff state for chat continuation.
+3. Keep the returned `uid`, `intake_access_token`, and `polling_token` together; they are the full consumer handoff state for chat continuation. Replace `intake_access_token` whenever a direct follow-up response rotates it.
 4. Send non-user-confirmed values in `intake` and attach matching `field_estimates` metadata so Coverage Cat can persist provenance and mark them in review.
-5. Keep `needs_more_info` behind the scenes when you can. The intended UX is that the human sees only the completed review page.
-6. When Coverage Cat returns `ready_for_review`, render the completed application JSON. Do not ask for credit consent yet — it is collected after the user chooses an offer.
+5. Keep `needs_more_info` behind the scenes when you can. The intended UX is that the human sees only the completed review page, or at most one staged review turn that also gathers the final shopper-owned contact details.
+6. When Coverage Cat returns `ready_for_review`, or when a consumer follow-up payload carries a staged `review` plus bundled contact-detail `next_question`, render the completed application JSON. Do not ask for credit consent yet — it is collected after the user chooses an offer.
 7. Treat any free-text corrections during review as edits to patch back through the follow-up API or delegated `draft`, depending on the path.
 8. Present structured offers clearly.
 9. At `select`, accept only a real-user `Yes` to the credit-consent prompt before binding a chosen offer.
@@ -134,8 +140,10 @@ Keep the conversation short, safe, and user-led:
 - Reuse known facts and search the available context before asking the human anything: user-controlled vaults, prior messages, connected files, CRM records, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Do not surface `needs_more_info` as a step-by-step questionnaire unless your product intentionally falls back to one after exhausting operator-side context. The intended umbrella UX is a single review page followed by offers.
+- If the only shopper-owned gaps left are the final contact details, show the assembled review and ask for full name, email, and full address together in one message rather than one field at a time.
 - Any value coming from CRM, documents, email threads, or heuristics that the human has not directly confirmed yet should be sent in `intake` with a matching `field_estimates` row carrying `field`, `source`, and `confidence`.
 - Do not ask for credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
+- Use `resume_url` only as a browser fallback. When Coverage Cat reaches `payment_needed` or carrier-managed signing, hand the user to the returned browser URL instead of collecting payment or e-sign details in chat.
 - In sandbox mode, use fake or test contact details and stop at `status`. Do not treat sandbox offers, tokens, or links as a real customer handoff.
 
 ## API Loop
@@ -246,6 +254,7 @@ If the response is `quoted`:
 
 - Lead with `response_summary`.
 - Show each offer separately with carrier, annual price, coverage limit, any `minimum_requirements`, and `display_notes`.
+- If more than three offers are returned, show the recommended offer first and then the best alternative carrier when one exists before summarizing the remaining offers.
 - If `minimum_requirements` is present, render it as a visually distinct block before the general notes.
 - Use `selection_guidance` to explain the suggested default choice.
 - Make clear that premiums are estimates until final underwriting.

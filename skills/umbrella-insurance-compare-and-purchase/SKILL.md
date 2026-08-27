@@ -1,6 +1,6 @@
 ---
 name: umbrella-insurance-compare-and-purchase
-description: "Discoverability alias for Coverage Cat's umbrella purchase skill. Use whether you're a consumer's own AI agent or a partner operator: start with the consumer-prefill handoff when no operator bearer key is available, or use the delegated umbrella flow when one is."
+description: "Discoverability alias for Coverage Cat's umbrella purchase skill. Use whether you're a consumer's own AI agent or a partner operator: start with the consumer-prefill handoff when no operator bearer key is available, keep the direct `/api/intake/:uid/...` follow-up loop in chat when possible, or use the delegated umbrella flow when a real operator key is already present."
 ---
 
 # Umbrella Insurance Compare And Purchase
@@ -30,12 +30,26 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 - `POST /api/agent/umbrella/status`
 - `POST /api/agent/umbrella/attach`
 
+## Consumer Follow-Up Loop
+
+- `POST /api/consumer/umbrella/prefill`
+- `GET /api/intake/:uid/issues`
+- `PATCH /api/intake/:uid`
+- `POST /api/intake/:uid/select`
+- `POST /api/intake/:uid/bind`
+- `POST /api/intake/:uid/attach`
+
 ## Guardrails
 
 - Prefill from the user's own context before asking a single question.
 - Use `POST /api/consumer/umbrella/prefill` plus one review card when you do not have an operator bearer key.
+- Keep the user out of the loop until `GET /api/intake/:uid/issues` reaches `ready_for_submission`, or until that payload already carries a staged `review` plus bundled `next_question` for the shopper's final contact details.
+- On that staged review turn, ask for full name, email, and full address together rather than one field at a time, and let the user send corrections in the same reply.
+- Keep the returned `uid` plus the freshest rotated `intake_access_token`, continue the direct `/api/intake/:uid/...` follow-up loop in chat, and use `resume_url` only as a browser fallback.
 - Use an operator-issued bearer token for every delegated umbrella endpoint.
 - Start with the fullest intake and any matching `field_estimates`.
 - Do not ask for user credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
+- When Coverage Cat returns multiple offers, do not collapse them to only the recommended default if alternatives are present.
+- Keep payment and carrier-managed signing in the browser. When Coverage Cat returns `payment_needed`, share `payment_url` instead of collecting payment details in chat.
 - If you are rehearsing, set `sandbox: true` only on the first create call for that `uid`.
 - Keep read-only calculator and finder jobs on the separate insurance-tools skill rather than opening a delegated umbrella session.
