@@ -46,7 +46,7 @@ This skill supports two different jobs. Pick one path first, because the consume
 1. Use this path when the shopper wants their own AI agent to gather the fullest homeowners application from user-controlled context before a single review step, or when you do not have an operator key.
 2. On a cold start, if the user's full name, email, or property address are missing, ask only for those three items first. Do not open with date-of-birth, marital-status, property-type, new-purchase, or mortgage questions unless the user volunteers them or your runtime truly cannot continue any other way.
 3. As soon as you have a structured address, search the user's own context first, then defensible property sources such as property records, Zillow, and Realtor.com, to assemble the fullest intake you can before review.
-4. Before you call Coverage Cat, recover the core non-estimable profile and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether this is owner-occupied or a new purchase. Coverage Cat can estimate many reviewable home fields, but it does not infer every top-level shopper fact from an address alone.
+4. Before you call Coverage Cat, recover the core non-estimable profile and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether this is owner-occupied or a new purchase. Coverage Cat can estimate many reviewable home fields, but it does not infer every top-level shopper fact from an address alone, and if current-policy expiration is still missing you should carry it into review as an estimated value two months from today instead of turning it into a standalone second-turn question.
 5. Call `POST /api/consumer/homeowners/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
 6. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Show one review card from `review_summary`, with the soft-credit consent prompt first and the prefilled application below it.
 7. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review or quote data.
@@ -61,9 +61,9 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
 1. Call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` to inspect what still blocks submission, the returned schema hints, any estimated answers waiting for review, and the GUI handoff links.
 2. Read the returned payload under `resource`. The important fields are `resource.status`, `resource.missing_fields`, `resource.review_estimates`, `resource.fix_issues_request_login_url`, and the sensitive direct session link `resource.fix_issues_portal_url`.
-3. Treat `resource.missing_fields` as a behind-the-scenes enrichment backlog, not a first-turn questionnaire. Once Coverage Cat has a structured address it can often estimate many reviewable home fields itself, so keep searching context and property sources before you ask for more.
+3. Treat `resource.missing_fields` as a behind-the-scenes enrichment backlog, not a first-turn questionnaire. Once Coverage Cat has a structured address it can often estimate many reviewable home fields itself, so keep searching context and property sources before you ask for more. Do not interrupt the intended second-turn review just to ask for current policy expiration on its own; if `policy_expire` is still missing, let Coverage Cat carry an estimated value two months from today into that review turn.
 4. Use `PATCH /api/intake/:uid` with that same bearer token to write user-confirmed answers, or to write estimated homeowners values plus matching `field_estimates` rows when your own context can defensibly fill them.
-5. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. At that point, render one review step or hand the user to `resource.fix_issues_request_login_url` so Coverage Cat's GUI can handle the same review.
+5. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. At that point, render one review step or hand the user to `resource.fix_issues_request_login_url` so Coverage Cat's GUI can handle the same review. Keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections.
 6. On that one review turn, collect any corrections plus the real homeowner's soft-credit consent, then send one final `PATCH /api/intake/:uid` with `confirm_submission: true`. For most successful consumer-prefill handoffs, that last patch only needs `credit_check_authorized: true`.
 7. After submit, keep polling `GET /api/intake/:uid/issues` with the same bearer token until Coverage Cat returns structured homeowners quote review data or the user needs the browser handoff.
 8. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
@@ -93,11 +93,12 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 2. On the consumer-prefill path, if you are starting cold, ask only for the user's full name, email, and property address; then search the user's own vault, prior messages, connected files, property records, Zillow, and Realtor.com before you ask for anything else.
 3. Recover core non-estimable shopper and occupancy facts from user-controlled context before you call Coverage Cat, especially date of birth, marital status, and whether the property is owner-occupied or a new purchase.
 4. Send non-user-confirmed home values in `intake.home[]` with matching `field_estimates[]` rows so Coverage Cat can preserve provenance and mark them for later review.
-5. Keep `needs_more_info` behind the scenes when you can. The intended UX is a single review-and-consent handoff, not a long questionnaire.
-6. Withhold `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly said yes to a soft credit pull.
-7. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
-8. Once offers are ready, summarize them clearly and hand the homeowner to Coverage Cat's secure portal for final selection, estimated-field confirmation, and bind.
-9. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
+5. Missing `policy_expire` should not block the one-time review turn. If it is still unknown, keep the second turn as the full review and submission request and carry an estimated `policy_expire` value two months from today into that review.
+6. Keep `needs_more_info` behind the scenes when you can. The intended UX is a single review-and-consent handoff, not a long questionnaire.
+7. Withhold `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly said yes to a soft credit pull.
+8. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
+9. Once offers are ready, summarize them clearly and hand the homeowner to Coverage Cat's secure portal for final selection, estimated-field confirmation, and bind.
+10. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
 
 ## Conversation Rules
 
@@ -109,11 +110,19 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - Recover date of birth, marital status, and owner-occupied/new-purchase facts from the user's own context before you rely on Coverage Cat's estimated review card. Coverage Cat estimates many home-editor fields, not every top-level shopper fact.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Coverage Cat can enrich many reviewable home fields once it has a structured address. Prefer one completed estimated review card plus soft-credit consent over a long collection loop.
+- Do not interrupt the first follow-up turn with a standalone current-policy-expiration question. If `policy_expire` is still missing, keep the second turn as the full review and submission request and carry an estimated value two months from today into that review.
+- When you render the review, keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections so the review does not run together.
 - Do not set `credit_check_authorized` to `true` until the real homeowner has reviewed the assembled application and explicitly answered yes to the soft-credit prompt.
 - If Coverage Cat is only missing `credit_check_authorized`, render a single review step: put the soft-credit explanation and consent prompt first, then show the current application summary or JSON below it.
 - If the user corrects anything during that review, patch the same `uid` first, then rerun the same one-time review step before resubmitting.
 - In sandbox mode, use fake or test contact details and never treat the returned offers or links as a real customer handoff.
 - Do not use this homeowners workflow for umbrella purchase. Use the dedicated umbrella purchase skill instead.
+
+### Numeric shorthand for enum answers
+
+- When you need a human answer for a dropdown-like homeowners field, you may present numbered choices for home ownership / occupancy and property type.
+- Accept the number alone as shorthand, then map it back to the canonical API value before you patch Coverage Cat.
+- Echo the resolved value back in the review summary so the homeowner can confirm it.
 
 ## Endpoint
 
@@ -325,6 +334,8 @@ Coverage Cat still needs either more application data or the real homeowner's fi
 - If `missing_fields` is only `credit_check_authorized`, treat this as the one-time review checkpoint rather than a normal missing-data failure.
 - In that credit-consent checkpoint, explain that Coverage Cat needs the real homeowner's explicit authorization for a soft credit pull that does not affect their credit score.
 - Render a single review step: put that consent prompt first, then show the current application summary or JSON below it.
+- Do not interrupt that review turn just to ask current policy expiration on its own. If `policy_expire` is still missing, keep it in the review turn as an estimated value two months from today.
+- Keep the review visually separated into labeled applicant details, property details, estimated structure details, estimated systems details, and other items.
 - Do not set `credit_check_authorized` to `true` until the real homeowner personally says yes.
 - If the homeowner corrects anything during review, patch the same `uid` first, then rerun the same one-time review step before asking for consent again.
 - After explicit yes, call `POST /api/agent/homeowners/quotes` again with the same `uid` and `intake.credit_check_authorized: true`.
