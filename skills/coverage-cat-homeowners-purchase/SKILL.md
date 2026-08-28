@@ -111,7 +111,6 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Coverage Cat can enrich many reviewable home fields once it has a structured address. Prefer one completed estimated review card plus soft-credit consent over a long collection loop.
 - Do not interrupt the first follow-up turn with a standalone current-policy-expiration question. If `policy_expire` is still missing, keep the second turn as the full review and submission request and carry an estimated value two months from today into that review.
-- For dropdown-like homeowners fields such as home ownership / occupancy and property type, offer numbered choices when helpful and accept the number alone as shorthand for the selected value.
 - When you render the review, keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections so the review does not run together.
 - Do not set `credit_check_authorized` to `true` until the real homeowner has reviewed the assembled application and explicitly answered yes to the soft-credit prompt.
 - If Coverage Cat is only missing `credit_check_authorized`, render a single review step: put the soft-credit explanation and consent prompt first, then show the current application summary or JSON below it.
