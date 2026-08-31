@@ -1,4 +1,4 @@
 interface:
   display_name: "Coverage Cat Umbrella"
   short_description: "Run Coverage Cat's consumer-prefill or delegated umbrella flow"
-  default_prompt: "Use $coverage-cat-umbrella-purchase to operate Coverage Cat's umbrella purchase workflow. Default to the consumer-prefill handoff when no operator bearer key is available in runtime, and only use the delegated flow when a real operator key is already present."
+  default_prompt: "Use $coverage-cat-umbrella-purchase to operate Coverage Cat's umbrella purchase workflow. Default to the consumer-prefill handoff when no operator bearer key is available in runtime. On every pre-submit turn, tell the user the application is not submitted yet and Coverage Cat has not received a submitted application yet, render gathered details and remaining shopper-owned items as short labeled bullets or sections rather than a prose paragraph, and ask for any remaining shopper-owned details in plain English. Only use the delegated flow when a real operator key is already present."
