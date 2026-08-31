@@ -36,6 +36,8 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 - Before you call Coverage Cat, recover core shopper and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether the home is owner-occupied or a new purchase.
 - Do not open with a date-of-birth or marital-status questionnaire when the consumer-prefill handoff can already carry an estimated review card.
 - Do not break the second turn into a standalone current-policy-expiration question. Keep current-policy expiration in the review turn as an estimated value two months from today when needed.
+- On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
+- When you list gathered details, estimated answers, or remaining items for the homeowner, use short labeled bullets or sections rather than a prose paragraph.
 - For dropdown-like homeowners fields such as home ownership / occupancy and property type, numbered options are fine and the number alone as shorthand is acceptable.
 - Keep the review output split into clearly labeled applicant details, property details, estimated structure details, estimated systems details, and other sections so the review does not blur together.
 - Use `POST /api/consumer/homeowners/prefill` plus one review card and soft-credit consent when you do not have an operator bearer key.
