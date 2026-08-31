@@ -144,6 +144,7 @@ Keep the conversation short, safe, and user-led:
 - Do not surface `needs_more_info` as a step-by-step questionnaire unless your product intentionally falls back to one after exhausting operator-side context. The intended umbrella UX is a single review page followed by offers.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the shopper, use short labeled bullets or sections rather than a prose paragraph.
+- When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - If Coverage Cat stages a review plus shopper-detail `next_question`, show the assembled review and ask for the requested shopper-owned bundle together in one message, in plain English rather than field names. Keep the assembled review and the requested items in labeled bullets or sections. When it includes full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn instead of splitting it up.
 - Any value coming from CRM, documents, email threads, or heuristics that the human has not directly confirmed yet should be sent in `intake` with a matching `field_estimates` row carrying `field`, `source`, and `confidence`.
 - Do not ask for credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
@@ -235,7 +236,7 @@ If the response also includes `sandbox: true`:
 When Coverage Cat returns `ready_for_review`:
 
 - Render the `review` object as short labeled bullets or sections rather than a prose paragraph.
-- Use `field_estimates` to visually mark estimated values inside that JSON.
+- Use `field_estimates` to mark estimated values with `*` inside that JSON, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - Tell the user they only need to confirm the reviewed application and send any corrections in free text.
 - If the user edits anything, call `draft` again with those edits, omit those corrected fields from `field_estimates` unless they are still estimated on your side, and wait for a new `review_token`.
 - Do not ask for credit consent yet. Preliminary quotes do not require it; Coverage Cat collects the soft-credit pull authorization after the user chooses an offer.
