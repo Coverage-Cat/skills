@@ -113,6 +113,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - Coverage Cat can enrich many reviewable home fields once it has a structured address. Prefer one completed estimated review card plus soft-credit consent over a long collection loop.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the homeowner, use short labeled bullets or sections rather than a prose paragraph.
+- When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - Do not interrupt the first follow-up turn with a standalone current-policy-expiration question. If `policy_expire` is still missing, keep the second turn as the full review and submission request and carry an estimated value two months from today into that review.
 - When you render the review, keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections so the review does not run together, and list any remaining actions the same way.
 - Do not set `credit_check_authorized` to `true` until the real homeowner has reviewed the assembled application and explicitly answered yes to the soft-credit prompt.
