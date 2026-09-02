@@ -31,7 +31,7 @@ Sandbox and errors: set top-level `sandbox: true` only on the first delegated cr
 
 Coverage Cat rotates a fresh `intake_access_token` in every successful direct follow-up response on the consumer-prefill path. Always reuse the newest token you have for the next `/api/intake/:uid/...` call.
 
-Payment progression on the delegated path stays in `status`: `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns `payment_url`.
+Payment progression on the delegated path stays in `status`: `chosen -> documents_needed -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns `payment_url`. Declarations review does not gate payment: uploading the declarations moves the case straight to `payment_needed` on the next `status` poll, and Coverage Cat reviews them in parallel. Only a missing first upload holds a case at `documents_needed`.
 
 ## Choose the Path
 
@@ -129,7 +129,7 @@ Keep the conversation short, safe, and user-led:
 8. Present structured offers clearly.
 9. At `select`, accept only a real-user `Yes` to the credit-consent prompt before binding a chosen offer.
 10. Keep the bind follow-up in chat whenever possible.
-11. For Monoline and Markel, collect declarations first, wait for Coverage Cat to verify them, then share payment only after verification is complete.
+11. For Monoline and Markel, collect declarations first, then share `payment_url` as soon as `status` returns `payment_needed`. Uploading the declarations is enough to unlock payment — Coverage Cat reviews them in parallel and does not make the user wait on that review.
 12. If any response includes `sandbox: true`, treat every offer, token, and link as mocked test data and do not continue into a live customer handoff.
 
 ## Conversation Rules
@@ -288,10 +288,8 @@ Handle the response like this:
 
 - `credit_consent_required`: ask `credit_consent_question` now and retry `select` with the same `selection_token` plus the user's affirmative consent.
 - `needs_more_info_to_bind`: keep the user in chat. Ask only the fields in `next_question`, and also offer `offers_url` so the user can finish that same step inside Coverage Cat's GUI if they prefer. Then call the bind endpoint.
-- `documents_needed`: Coverage Cat accepted the selection and now needs the user's current home and auto declarations before it can verify the policy and request payment. Upload them through `attach` if you already have them in context. Otherwise, ask the user to share them, and also offer `offers_url` so they can complete the upload in Coverage Cat's GUI if that is easier.
-- `documents_pending_review`: Coverage Cat has the declarations and is reviewing them. Do not ask for payment yet. Poll `status`.
-- When `documents_pending_review` includes `poll_after_seconds`, wait that long before polling again unless the user asks for an update sooner.
-- `payment_needed`: Coverage Cat finished declarations review and is ready for secure payment setup. Share `payment_url`, then poll `status`.
+- `documents_needed`: Coverage Cat accepted the selection and now needs the user's current home and auto declarations. Upload them through `attach` if you already have them in context. Otherwise, ask the user to share them, and also offer `offers_url` so they can complete the upload in Coverage Cat's GUI if that is easier. Uploading is what unlocks payment — poll `status` right after and expect `payment_needed`.
+- `payment_needed`: Coverage Cat has the declarations on file and is ready for secure payment setup. Share `payment_url`, then poll `status`. Declarations review continues in parallel; it does not block payment.
 - `chosen`: Coverage Cat has accepted the selection and handed the case to the carrier's normal follow-up path. This is the expected immediate post-select state for RLI and similar carrier-managed flows.
 
 ### 5. Bind continuation step
@@ -308,9 +306,7 @@ Handle the response like this:
 
 - `needs_more_info_to_bind`: ask only the next bind-stage question bundle, offer `offers_url` so the user can finish it in Coverage Cat's GUI if they prefer, then call `bind` again.
 - `ready_to_finalize`: call `bind` again with the same `uid` and no `intake` patch.
-- `documents_needed`: upload declarations or ask the user to provide them, and also offer `offers_url` so they can complete the upload in Coverage Cat's GUI. Then poll `status`.
-- `documents_pending_review`: tell the user verification is in progress and poll `status`.
-- Use `poll_after_seconds` from the API response when present. If the status remains pending, tell the user verification is still in progress. There is no extra customer action unless Coverage Cat asks for updated documents.
+- `documents_needed`: upload declarations or ask the user to provide them, and also offer `offers_url` so they can complete the upload in Coverage Cat's GUI. Then poll `status` — the upload unlocks payment, so expect `payment_needed` next.
 - `payment_needed`: share `payment_url` and ask the user to complete secure payment setup there.
 - `chosen`: keep the user updated through `status`. Share `offers_url` if they want Coverage Cat's offers page for review.
 
@@ -321,7 +317,7 @@ For Monoline and Markel, proactively collect the user's current auto and home de
 - If you have access to the user's email, file storage, or photos, search for these documents first (look for PDFs or images with terms like "declarations", "dec page", "policy summary", or the carrier name).
 - If you find candidates, confirm with the user before using them.
 - If you cannot find them automatically, ask the user to share or photograph them.
-- Forward any documents you obtain via `POST /api/agent/umbrella/attach` so Coverage Cat can review them before payment.
+- Forward any documents you obtain via `POST /api/agent/umbrella/attach`. The upload unlocks payment right away; Coverage Cat reviews them in parallel.
 - `attach` is only for Monoline or Markel after an offer has been selected. It is not a generic file-upload endpoint for pre-quote drafts.
 
 ### 6. Status step
@@ -332,10 +328,8 @@ For sandbox sessions, use `status` only to rehearse the mocked draft/review/quot
 
 Interpret the main statuses like this:
 
-- `documents_needed`: Coverage Cat needs declarations uploads before payment. Upload any files you already have, or ask the user to provide them, and offer `offers_url` so they can complete the upload in Coverage Cat's GUI if they prefer.
-- `documents_pending_review`: Coverage Cat is reviewing the uploaded declarations. Tell the user verification is ongoing and do not ask for payment yet.
-- If the API returns `poll_after_seconds`, use that as the default poll cadence. If the status stays pending, keep the user informed that verification is still in progress.
-- `payment_needed`: Coverage Cat verified the declarations and is ready for payment collection. Share `payment_url`.
+- `documents_needed`: Coverage Cat needs declarations uploads before payment. Upload any files you already have, or ask the user to provide them, and offer `offers_url` so they can complete the upload in Coverage Cat's GUI if they prefer. After uploading, poll `status`: the upload unlocks payment, so the next status is `payment_needed`.
+- `payment_needed`: Coverage Cat has the declarations on file and is ready for payment collection. Share `payment_url`. Declarations review continues in parallel and does not block payment.
 - `waiting_on_carrier`: no user action is needed. Tell the user Coverage Cat is waiting on the carrier's follow-up path. Offer `offers_url` if they want to review the selected offer. For agency-pay carriers, this means declarations and payment are already on file. For RLI-style flows, any remaining signing or payment link comes from the carrier.
 - `bound`: tell the user the policy is bound.
 - `info_requested`: Coverage Cat has a manual follow-up request. Keep the user in chat if you can, and only use the fallback link if you need the exact human-authored request.

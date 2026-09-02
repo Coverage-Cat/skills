@@ -968,7 +968,6 @@ components:
             - credit_consent_required
             - needs_more_info_to_bind
             - documents_needed
-            - documents_pending_review
             - payment_needed
             - chosen
           type: string
@@ -1069,7 +1068,6 @@ components:
             - needs_more_info_to_bind
             - ready_to_finalize
             - documents_needed
-            - documents_pending_review
             - payment_needed
             - chosen
           type: string
@@ -1203,7 +1201,6 @@ components:
             - needs_more_info_to_bind
             - ready_to_finalize
             - documents_needed
-            - documents_pending_review
             - payment_needed
             - waiting_on_carrier
             - info_requested
@@ -3567,7 +3564,7 @@ paths:
   /api/agent/umbrella/status:
     post:
       description: |
-        Returns the current chat-manageable state for the delegated umbrella session, including quote selection, bind-stage follow-up questions, declarations-upload, declarations-review, payment, waiting-on-carrier, info-requested, blocked, and bound states. Chosen and waiting responses may include `offers_url` so the user can review the selected offer on Coverage Cat without leaving the normal workflow. If the session is back at `ready_for_review`, render the same single review page described on the draft endpoint. When `documents_pending_review` includes `poll_after_seconds`, wait that long before polling again unless the user asks for an update sooner. PaymentTransition: follow `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns a secure `payment_url`. Sandbox delegated umbrella sessions use this endpoint to rehearse the mocked draft/review/quote loop after offers are returned.
+        Returns the current chat-manageable state for the delegated umbrella session, including quote selection, bind-stage follow-up questions, declarations-upload, payment, waiting-on-carrier, info-requested, blocked, and bound states. Chosen and waiting responses may include `offers_url` so the user can review the selected offer on Coverage Cat without leaving the normal workflow. If the session is back at `ready_for_review`, render the same single review page described on the draft endpoint. PaymentTransition: follow `chosen -> documents_needed -> payment_needed -> waiting_on_carrier -> bound`. Declarations review does not gate payment — uploading the declarations moves the case to `payment_needed`, and Coverage Cat reviews them in parallel. When `payment_needed` is returned, Coverage Cat also returns a secure `payment_url`. Sandbox delegated umbrella sessions use this endpoint to rehearse the mocked draft/review/quote loop after offers are returned.
       operationId: get_delegated_umbrella_status
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
