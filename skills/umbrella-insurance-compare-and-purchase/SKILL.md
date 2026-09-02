@@ -43,8 +43,11 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 
 - Prefill from the user's own context before asking a single question.
 - On a cold start, call `POST /api/consumer/umbrella/prefill` before you ask the shopper a questionnaire. Send the fullest estimate you can justify from the shopper's own context first.
+- On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
+- When you list gathered details, estimated answers, or remaining items for the shopper, use short labeled bullets or sections rather than a prose paragraph.
+- When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - Keep the user out of the loop until `GET /api/intake/:uid/issues` reaches `ready_for_submission`, or until that payload already carries a staged `review` plus bundled `next_question` for the shopper-owned details Coverage Cat still needs.
-- On that staged review turn, ask for the shopper-owned bundle together rather than one field at a time. When Coverage Cat asks for full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn and let the user send corrections in the same reply.
+- On that staged review turn, ask for the shopper-owned bundle together in plain English rather than one field at a time. Keep the assembled review and the requested items in labeled bullets or sections. When Coverage Cat asks for full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn and let the user send corrections in the same reply.
 - If the shopper gives a birthday in normal US `MM-DD-YYYY` form, normalize it to `YYYY-MM-DD` before you patch Coverage Cat.
 - Keep the returned `uid` plus the freshest rotated `intake_access_token`, continue the direct `/api/intake/:uid/...` follow-up loop in chat, and use `resume_url` only as a browser fallback.
 - Use an operator-issued bearer token for every delegated umbrella endpoint.
