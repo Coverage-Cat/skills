@@ -55,5 +55,6 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 - Do not ask for user credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
 - When Coverage Cat returns multiple offers, do not collapse them to only the recommended default if alternatives are present.
 - Keep payment and carrier-managed signing in the browser. When Coverage Cat returns `payment_needed`, share `payment_url` instead of collecting payment details in chat.
+- For Monoline and Markel, keep required home and auto declarations in the post-choose flow. Once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with `payment_url` within about 5-10 minutes while declarations verification continues in parallel.
 - If you are rehearsing, set `sandbox: true` only on the first create call for that `uid`.
 - Keep read-only calculator and finder jobs on the separate insurance-tools skill rather than opening a delegated umbrella session.
