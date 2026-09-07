@@ -52,6 +52,7 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 - Keep the returned `uid` plus the freshest rotated `intake_access_token`, continue the direct `/api/intake/:uid/...` follow-up loop in chat, and use `resume_url` only as a browser fallback.
 - Use an operator-issued bearer token for every delegated umbrella endpoint.
 - Start with the fullest intake and any matching `field_estimates`.
+- If delegated `draft` reuses or conflicts on a recent buyer-email session, switch to the returned `uid` and continue that existing application instead of retrying create.
 - Do not ask for user credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
 - When Coverage Cat returns multiple offers, do not collapse them to only the recommended default if alternatives are present.
 - When quoted offers include Monoline or Markel, explain during quote review that current home and auto declarations are still required before payment and that secure checkout is usually ready within about 5-10 minutes once those uploads are on file.

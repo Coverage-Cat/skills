@@ -162,6 +162,7 @@ Call `POST /api/agent/umbrella/draft`.
 - Start with the fullest `intake` patch you can build from approved operator-side context, not just the fields the human typed in the current turn.
 - Include `field_estimates` for every value you are sending in `intake` that is not already directly user-confirmed. Omit `field_estimates` only for user-confirmed values.
 - Send only changed fields on follow-up calls.
+- If Coverage Cat reuses a recent delegated draft for the same buyer email, keep working on the returned `uid` and `review_token`; that response is continuing one existing session, not creating a second application.
 - Accepted aliases inside `intake`:
   Send `birthday` as the applicant birth date and Coverage Cat maps it to internal `age`.
   Send `spouse_birthday` and Coverage Cat maps it to `spouse_age`.
@@ -225,6 +226,7 @@ If the response is:
 - If you exhaust approved operator-side context and still get `needs_more_info`, stop and escalate or hand off rather than drifting into a long questionnaire unless your product explicitly chooses that fallback.
 - `ready_for_review`: render the single review page described below.
 - `ineligible`: tell the user Coverage Cat cannot complete delegated umbrella purchase for that state yet.
+- `409 conflict`: Coverage Cat found a more advanced recent delegated umbrella session for that buyer email. Reuse the returned `uid` and continue from its current `status` instead of retrying `draft`.
 
 If the response also includes `sandbox: true`:
 
