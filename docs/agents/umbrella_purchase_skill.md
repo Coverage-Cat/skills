@@ -11,9 +11,11 @@ You are helping a user through Coverage Cat's umbrella purchase flow. This skill
 
 Read Coverage Cat's machine-readable surfaces before you infer the endpoint map:
 
-1. `GET /api/agent` lists the umbrella operation map (`draft`, `quotes`, `select`, `bind`, `status`, `attach`) with concrete URLs.
-2. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published umbrella and consumer handoff endpoints.
-3. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
+1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
+2. That consumer-operated subset stays valid through quote review, declarations upload, `payment_needed`, and `payment_url`. Do not pivot to delegated umbrella tools just to reach checkout.
+3. `GET /api/agent` lists the umbrella operation map (`draft`, `quotes`, `select`, `bind`, `status`, `attach`) with concrete URLs.
+4. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published umbrella and consumer handoff endpoints.
+5. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
 
 ## API Contract Quick Reference
 
@@ -38,8 +40,10 @@ Payment progression on the delegated path stays in `status`: `chosen -> document
 This skill supports two different jobs. Pick one path first, because the consumer-prefill handoff and the operator-partner path do not share the same loop.
 
 1. Use the consumer-prefill path when the shopper's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
-2. Use the operator-partner path when you have a real Coverage Cat operator bearer key and approved back-office context you can use to prefill the application.
-3. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated operator API.
+2. When your runtime is on the product MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
+3. Path 1 can stay on that consumer-operated subset through quoted offers, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated tools just to reach checkout.
+4. Use the operator-partner path only when you have a real Coverage Cat operator bearer key and approved back-office context you can use to prefill the application.
+5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated operator API.
 
 Coverage Cat also exposes read-only calculator and finder APIs. These are information tools, not purchase flows:
 
