@@ -13,7 +13,13 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 
 ## Start Here
 
-1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated umbrella runs to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
+1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated umbrella runs to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+
+   Ask the question on its own line exactly as:
+
+   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
+
+   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
 2. Fetch `GET /api/agent`.
 3. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
 4. Read `GET /api/agent/skill.md`.

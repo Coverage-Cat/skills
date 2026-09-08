@@ -11,7 +11,13 @@ You are helping a user get homeowners quotes. This skill covers both the consume
 
 Read the discovery and schema surfaces before you start guessing endpoint names or payloads:
 
-1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`.
+1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+
+   Ask the question on its own line exactly as:
+
+   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
+
+   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
 2. Stay on that consumer-operated subset through the one-time review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal, so do not switch to delegated tools just because the shopper is unauthenticated.
 3. `GET /api/agent` lists the umbrella and homeowners operation maps, including the delegated homeowners fix-issues email endpoint and the direct-intake follow-up URL templates.
 4. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published homeowners and consumer handoff endpoints.

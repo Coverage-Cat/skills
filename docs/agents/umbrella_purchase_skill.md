@@ -13,7 +13,13 @@ Choose this skill, not the umbrella calculator, for requests like `shop for umbr
 
 Read Coverage Cat's machine-readable surfaces before you infer the endpoint map:
 
-1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
+1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+
+   Ask the question on its own line exactly as:
+
+   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
+
+   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
 2. That consumer-operated subset stays valid through quote review, declarations upload, `payment_needed`, and `payment_url`. Do not pivot to delegated umbrella tools just to reach checkout.
 3. `GET /api/agent` lists the umbrella operation map (`draft`, `quotes`, `select`, `bind`, `status`, `attach`) with concrete URLs.
 4. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published umbrella and consumer handoff endpoints.

@@ -11,7 +11,13 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 
 ## Start Here
 
-1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated homeowners runs to the product MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`.
+1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated homeowners runs to the product MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+
+   Ask the question on its own line exactly as:
+
+   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
+
+   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
 2. Fetch `GET /api/agent`.
 3. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
 4. Read `GET /api/agent/homeowners/skill.md`.
