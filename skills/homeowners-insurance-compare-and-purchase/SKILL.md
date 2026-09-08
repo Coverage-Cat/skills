@@ -11,17 +11,19 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 
 ## Start Here
 
-1. Fetch `GET /api/agent`.
-2. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
-3. Read `GET /api/agent/homeowners/skill.md`.
-4. Read `/ai/skills/homeowners/setup` if you need the delegated operator path.
+1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated homeowners runs to the product MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`.
+2. Fetch `GET /api/agent`.
+3. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
+4. Read `GET /api/agent/homeowners/skill.md`.
+5. Read `/ai/skills/homeowners/setup` if you need the delegated operator path.
 
 ## Choose The Path
 
 1. Use the consumer-prefill path when there is no operator key or the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
-2. Use the delegated operator path when you have a real Coverage Cat operator bearer key and approved back-office context to prefill the application.
-3. If your runtime cannot prefill, fall back to the direct browser handoff at `/intake`.
-4. Do not mix the consumer-prefill and delegated paths in one session.
+2. On the product MCP, stay on that same consumer-operated subset through review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal rather than the delegated MCP tools.
+3. Use the delegated operator path only when you have a real Coverage Cat operator bearer key and approved back-office context to prefill the application.
+4. If your runtime cannot prefill, fall back to the direct browser handoff at `/intake`.
+5. Do not mix the consumer-prefill and delegated paths in one session.
 
 ## Delegated Homeowners Loop
 
@@ -42,6 +44,7 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 - For dropdown-like homeowners fields such as home ownership / occupancy and property type, numbered options are fine and the number alone as shorthand is acceptable.
 - Keep the review output split into clearly labeled applicant details, property details, estimated structure details, estimated systems details, and other sections so the review does not blur together.
 - Use `POST /api/consumer/homeowners/prefill` plus one review card and soft-credit consent when you do not have an operator bearer key.
+- When the product MCP is available, use the consumer-operated subset named above instead of switching to delegated homeowners tools without operator auth.
 - Reuse the same `uid` for the delegated session.
 - Use `sandbox: true` only on the first delegated create call when rehearsing.
 - Hold back `credit_check_authorized` until the real homeowner reviews the assembled application and explicitly says yes to the soft-credit prompt.

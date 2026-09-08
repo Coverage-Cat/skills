@@ -33,7 +33,15 @@ These remain available for existing installs and prompts:
 - Developer portal: `https://www.coveragecat.com/developers`
 - Discovery JSON: `https://www.coveragecat.com/api/agent`
 - OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
+- Recommended MCP registration URL: `https://www.coveragecat.com/.well-known/mcp.json`
 - Skills hub: `https://www.coveragecat.com/ai/skills`
+
+## Consumer-operated MCP default
+
+- Register `https://www.coveragecat.com/.well-known/mcp.json` when the runtime supports MCP.
+- Stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach` for umbrella post-quote follow-up.
+- The umbrella consumer subset can stay on the no-operator path through `payment_needed` and `payment_url`; do not switch to delegated tools just to reach checkout.
+- Homeowners consumer agents should stay on the no-operator subset through review and quote follow-up, then let Coverage Cat's consumer portal finish final bind.
 
 ## Source of truth
 

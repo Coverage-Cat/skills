@@ -13,15 +13,17 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 
 ## Start Here
 
-1. Fetch `GET /api/agent`.
-2. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
-3. Read `GET /api/agent/skill.md`.
+1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated umbrella runs to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
+2. Fetch `GET /api/agent`.
+3. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
+4. Read `GET /api/agent/skill.md`.
 
 ## Choose The Path
 
 1. Use the consumer-prefill path when there is no operator key or when the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
-2. Use the delegated operator path when you already have a real Coverage Cat operator bearer key and approved back-office context.
-3. Do not mix the consumer-prefill and delegated paths in one session.
+2. On the product MCP, keep consumer-operated umbrella runs on that same subset through quote review, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated tools just to reach checkout.
+3. Use the delegated operator path only when you already have a real Coverage Cat operator bearer key and approved back-office context.
+4. Do not mix the consumer-prefill and delegated paths in one session.
 
 ## Delegated Umbrella Loop
 
@@ -46,6 +48,7 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 - If the user asks Coverage Cat to shop for or buy umbrella insurance, start this purchase skill instead of the read-only umbrella calculator.
 - Prefill from the user's own context before asking a single question.
 - On a cold start, call `POST /api/consumer/umbrella/prefill` before you ask the shopper a questionnaire. Send the fullest estimate you can justify from the shopper's own context first.
+- When the product MCP is available, use the consumer-operated subset named above instead of switching to delegated umbrella tools without operator auth.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the shopper, use short labeled bullets or sections rather than a prose paragraph.
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
@@ -57,8 +60,8 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 - Start with the fullest intake and any matching `field_estimates`.
 - If delegated `draft` reuses or conflicts on a recent buyer-email session, switch to the returned `uid` and continue that existing application instead of retrying create.
 - Do not ask for user credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
-- When Coverage Cat returns multiple offers, do not collapse them to only the recommended default if alternatives are present.
-- When quoted offers include Monoline or Markel, explain during quote review that current home and auto declarations are still required before payment and that secure checkout is usually ready within about 5-10 minutes once those uploads are on file.
+- When Coverage Cat returns multiple offers, do not collapse them to only the recommended default if alternatives are present. Render offers as a single markdown table with columns `Carrier | Coverage limit | Annual price | Min. auto limits | Notes` (one row per offer, recommended first, `(Recommended)` in the Notes column of the recommended row). Format prices as `$941/yr` and coverage limits as `$2M` / `$3M`. Do not restate offer prices or coverage limits in the surrounding prose.
+- Below the offers table, always render a `**Next steps to purchase:**` bulleted checklist. Include `Pick an offer`, `Confirm your auto policy meets the Min. auto limits shown` (when any offer has minimum_auto_limits), the Monoline/Markel declarations-upload bullets when applicable (about 5-10 minutes to checkout after upload), and the reminder to say `Yes` to the soft-credit-pull consent after selection. Never bury these steps in a prose paragraph.
 - Keep payment and carrier-managed signing in the browser. When Coverage Cat returns `payment_needed`, share `payment_url` instead of collecting payment details in chat.
 - For Monoline and Markel, keep required home and auto declarations in the post-choose flow. Once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with `payment_url` within about 5-10 minutes while declarations verification continues in parallel.
 - If you are rehearsing, set `sandbox: true` only on the first create call for that `uid`.
