@@ -1,6 +1,6 @@
 ---
 name: umbrella-insurance-compare-and-purchase
-description: "Discoverability alias for Coverage Cat's umbrella purchase skill. Use whether you're a consumer's own AI agent or a partner operator: start with the consumer-prefill handoff when no operator bearer key is available, keep the direct `/api/intake/:uid/...` follow-up loop in chat when possible, or use the delegated umbrella flow when a real operator key is already present."
+description: "Discoverability alias for Coverage Cat's umbrella purchase skill. Use when a shopper wants Coverage Cat to shop for, compare, quote, or buy umbrella insurance for them, whether you're a consumer's own AI agent or a partner operator: start with the consumer-prefill handoff when no operator bearer key is available, keep the direct `/api/intake/:uid/...` follow-up loop in chat when possible, or use the delegated umbrella flow when a real operator key is already present."
 ---
 
 # Umbrella Insurance Compare And Purchase
@@ -8,6 +8,8 @@ description: "Discoverability alias for Coverage Cat's umbrella purchase skill. 
 This alias mirrors Coverage Cat's canonical `coverage-cat-umbrella-purchase` skill.
 
 Use it when a shopper wants their own AI agent to gather context before a Coverage Cat handoff, or when a partner-operator agent needs Coverage Cat to run a live umbrella quote workflow instead of just returning read-only estimates.
+
+Choose this skill, not the umbrella calculator or `insurance-tools`, for requests like `shop for umbrella for me with Coverage Cat`.
 
 ## Start Here
 
@@ -43,6 +45,7 @@ Use it when a shopper wants their own AI agent to gather context before a Covera
 
 ## Guardrails
 
+- If the user asks Coverage Cat to shop for or buy umbrella insurance, start this purchase skill instead of the read-only umbrella calculator.
 - Prefill from the user's own context before asking a single question.
 - On a cold start, call `POST /api/consumer/umbrella/prefill` before you ask the shopper a questionnaire. Send the fullest estimate you can justify from the shopper's own context first.
 - When the product MCP is available, use the consumer-operated subset named above instead of switching to delegated umbrella tools without operator auth.

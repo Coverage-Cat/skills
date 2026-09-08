@@ -13,9 +13,9 @@ Start here:
 
 Use these skills when:
 
-- `umbrella-insurance-compare-and-purchase`: consumer-prefill umbrella handoff or delegated umbrella quoting, review, selection, attach, or bind continuation.
+- `umbrella-insurance-compare-and-purchase`: the shopper wants Coverage Cat to shop for, quote, compare, or buy umbrella insurance for them; use the consumer-prefill umbrella handoff or delegated umbrella quoting, review, selection, attach, or bind continuation.
 - `homeowners-insurance-compare-and-purchase`: consumer-prefill homeowners handoff with direct `/api/intake/:uid` follow-up when available, `/intake` browser fallback, or operator-authenticated delegated homeowners quoting.
-- `insurance-tools`: read-only calculators or the homeowners-agent finder.
+- `insurance-tools`: research-only calculators or the homeowners-agent finder, not live shopping or purchase.
 
 Legacy compatibility names remain available for existing installs:
 
