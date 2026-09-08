@@ -13,9 +13,9 @@ Start here:
 
 Use these skills when:
 
-- `umbrella-insurance-compare-and-purchase`: consumer-prefill umbrella handoff or delegated umbrella quoting, review, selection, attach, or bind continuation.
+- `umbrella-insurance-compare-and-purchase`: the shopper wants Coverage Cat to shop for, quote, compare, or buy umbrella insurance for them; use the consumer-prefill umbrella handoff or delegated umbrella quoting, review, selection, attach, or bind continuation.
 - `homeowners-insurance-compare-and-purchase`: consumer-prefill homeowners handoff with direct `/api/intake/:uid` follow-up when available, `/intake` browser fallback, or operator-authenticated delegated homeowners quoting.
-- `insurance-tools`: read-only calculators or the homeowners-agent finder.
+- `insurance-tools`: research-only calculators or the homeowners-agent finder, not live shopping or purchase.
 
 Legacy compatibility names remain available for existing installs:
 
@@ -26,6 +26,7 @@ Legacy compatibility names remain available for existing installs:
 Guardrails:
 
 - Register the product MCP at `/.well-known/mcp.json` when you want live quoting or comparison. That same connector already exposes `docs_list_topics`, `docs_search`, and `docs_get_resource`, so Coverage Cat setup stays on one MCP connection.
+- If the user says "shop for umbrella with Coverage Cat" or otherwise wants Coverage Cat to buy or quote umbrella insurance for them, start the umbrella purchase skill instead of `insurance-tools`.
 - Pick the consumer-prefill path first when no operator bearer key is available.
 - On the consumer-prefill path, keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data over the freshest rotated `intake_access_token`.
 - Do not mix consumer-prefill and delegated loops in one session.

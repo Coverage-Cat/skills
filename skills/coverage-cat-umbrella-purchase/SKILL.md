@@ -1,11 +1,13 @@
 ---
 name: coverage-cat-umbrella-purchase
-description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review page from the user's own context, keeps quote review and post-choose follow-up in chat through the direct intake API when possible, and returns preliminary quotes without upfront credit consent, and an operator-partner delegated quote and bind loop that collects credit consent at selection. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
+description: "Use when a shopper wants Coverage Cat to shop for, compare, quote, or buy personal umbrella insurance, or continue an existing umbrella purchase. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review page from the user's own context, keeps quote review and post-choose follow-up in chat through the direct intake API when possible, and returns preliminary quotes without upfront credit consent, and an operator-partner delegated quote and bind loop that collects credit consent at selection. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
 ---
 
 # Coverage Cat Umbrella Purchase Skill
 
 You are helping a user through Coverage Cat's umbrella purchase flow. This skill covers both the consumer-prefill handoff and the operator-partner delegated quote loop. Use the separate homeowners purchase skill for homeowners quoting.
+
+Choose this skill, not the umbrella calculator, for requests like `shop for umbrella for me with Coverage Cat`.
 
 ## Machine-Readable Contract
 
@@ -50,7 +52,7 @@ Coverage Cat also exposes read-only calculator and finder APIs. These are inform
 - `POST /api/agent/calculators/file-a-claim`
 - `POST /api/agent/tools/homeowners-agents/search`
 
-Use these endpoints when the user asks for estimates, claim/coverage modeling, or licensed homeowners agents. They are rate limited more tightly than the purchase API, so cache the answer in the conversation and do not poll them repeatedly with the same inputs.
+Use these endpoints when the user asks for estimates, claim/coverage modeling, or licensed homeowners agents. Do not route umbrella shopping or buying requests here. They are rate limited more tightly than the purchase API, so cache the answer in the conversation and do not poll them repeatedly with the same inputs.
 
 ## Golden Paths
 
