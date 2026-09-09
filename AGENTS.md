@@ -4,6 +4,8 @@ This repository is the public source for Coverage Cat's installable agent skills
 
 Start here:
 
+- Public agents.txt: `https://www.coveragecat.com/agents.txt`
+- Well-known agents.txt: `https://www.coveragecat.com/.well-known/agents.txt`
 - Developer portal: `https://www.coveragecat.com/developers`
 - Discovery JSON: `https://www.coveragecat.com/api/agent`
 - OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
@@ -25,6 +27,7 @@ Legacy compatibility names remain available for existing installs:
 
 Guardrails:
 
+- Agents landing on `coveragecat.com` should start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
 - Register the default consumer MCP at `/.well-known/mcp.json` when you want live quoting or comparison in ChatGPT or another manifest-aware MCP host. For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`. That same consumer connector already exposes `docs_list_topics`, `docs_search`, and `docs_get_resource`, so Coverage Cat setup stays on one MCP connection.
 - If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
   Ask the question on its own line exactly as:

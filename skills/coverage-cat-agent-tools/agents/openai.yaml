@@ -1,4 +1,4 @@
 interface:
   display_name: "Coverage Cat Tools"
   short_description: "Use Coverage Cat's read-only calculators"
-  default_prompt: "Use $coverage-cat-agent-tools for Coverage Cat's read-only calculator and agent-finder APIs."
+  default_prompt: "Use $coverage-cat-agent-tools for Coverage Cat's read-only calculator and agent-finder APIs. Start with https://www.coveragecat.com/agents.txt or https://www.coveragecat.com/.well-known/agents.txt, then use https://www.coveragecat.com/api/agent and https://www.coveragecat.com/developers. Do not drive the browser UI unless Coverage Cat should take over the shopper-facing flow."
