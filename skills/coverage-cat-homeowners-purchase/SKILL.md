@@ -11,17 +11,18 @@ You are helping a user get homeowners quotes. This skill covers both the consume
 
 Read the discovery and schema surfaces before you start guessing endpoint names or payloads:
 
-1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
    Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-2. Stay on that consumer-operated subset through the one-time review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal, so do not switch to delegated tools just because the shopper is unauthenticated.
-3. `GET /api/agent` lists the umbrella and homeowners operation maps, including the delegated homeowners fix-issues email endpoint and the direct-intake follow-up URL templates.
-4. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published homeowners and consumer handoff endpoints.
-5. The direct-homeowner follow-up API lives under `/api/intake/:uid/...` and uses the short-lived `intake_access_token` returned by consumer prefill.
+2. Stay on that consumer-operated subset through the one-time review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal, so do not switch to delegated tools just because the shopper is unauthenticated. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
+3. Use the delegated operator MCP or delegated homeowners API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
+4. `GET /api/agent` lists the umbrella and homeowners operation maps, including the delegated homeowners fix-issues email endpoint and the direct-intake follow-up URL templates.
+5. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published homeowners and consumer handoff endpoints.
+6. The direct-homeowner follow-up API lives under `/api/intake/:uid/...` and uses the short-lived `intake_access_token` returned by consumer prefill.
 
 ## API Contract Quick Reference
 
@@ -44,7 +45,7 @@ Payment progression: delegated homeowners quoting does not expose a separate pay
 This skill supports two different jobs. Pick one path first, because the consumer-prefill path and the operator-partner path do not share the same loop.
 
 1. Use the consumer-prefill path when the homeowner's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
-2. When your runtime is on the product MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`.
+2. When your runtime is on the default consumer MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`.
 3. Path 1 stays on that consumer-operated subset through review and quote follow-up, then hands final bind back to Coverage Cat's consumer portal.
 4. Use the operator-partner path only when you have a real Coverage Cat operator key and approved back-office context you can use to prefill the application.
 5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated API and dashboard.

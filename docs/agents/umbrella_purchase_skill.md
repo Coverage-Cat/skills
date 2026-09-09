@@ -13,17 +13,18 @@ Choose this skill, not the umbrella calculator, for requests like `shop for umbr
 
 Read Coverage Cat's machine-readable surfaces before you infer the endpoint map:
 
-1. If your runtime supports MCP, register Coverage Cat's product MCP at `/.well-known/mcp.json` and default consumer-operated agents to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
    Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-2. That consumer-operated subset stays valid through quote review, declarations upload, `payment_needed`, and `payment_url`. Do not pivot to delegated umbrella tools just to reach checkout.
-3. `GET /api/agent` lists the umbrella operation map (`draft`, `quotes`, `select`, `bind`, `status`, `attach`) with concrete URLs.
-4. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published umbrella and consumer handoff endpoints.
-5. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
+2. That consumer-operated subset stays valid through quote review, declarations upload, `payment_needed`, and `payment_url`. Do not pivot to delegated umbrella tools just to reach checkout. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
+3. Use the delegated operator MCP or delegated umbrella API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
+4. `GET /api/agent` lists the umbrella operation map (`draft`, `quotes`, `select`, `bind`, `status`, `attach`) with concrete URLs.
+5. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published umbrella and consumer handoff endpoints.
+6. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
 
 ## API Contract Quick Reference
 
@@ -48,7 +49,7 @@ Payment progression on the delegated path stays in `status`: `chosen -> document
 This skill supports two different jobs. Pick one path first, because the consumer-prefill handoff and the operator-partner path do not share the same loop.
 
 1. Use the consumer-prefill path when the shopper's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
-2. When your runtime is on the product MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
+2. When your runtime is on the default consumer MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`.
 3. Path 1 can stay on that consumer-operated subset through quoted offers, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated tools just to reach checkout.
 4. Use the operator-partner path only when you have a real Coverage Cat operator bearer key and approved back-office context you can use to prefill the application.
 5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated operator API.
