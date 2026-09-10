@@ -71,7 +71,55 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 ### Path 1: Consumer prefill handoff
 
 1. Use this path when the shopper wants their own AI agent to gather the fullest umbrella application from user-controlled context before a single review step, or when you do not have an operator key.
-2. On a cold start, do not open with a questionnaire. Call `POST /api/consumer/umbrella/prefill` first with the fullest `intake` or estimate you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
+2. On a cold start, do not open with a questionnaire. Call `POST /api/consumer/umbrella/prefill` first with `credit_consent_pending: true` and the fullest `intake` or estimate you can assemble. On the very first consumer-prefill handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
+   Use canonical consumer umbrella keys such as `full_name`, `email`, `phone_number`, `birthday`, `marital_status`, `license_state`, `license_number`, `occupation`, `line_of_work`, `spouse_full_name`, `spouse_birthday`, `spouse_license_state`, `spouse_license_number`, `address.{street,city,state,zip}`, `approximate_asset_value` or `net_worth_numeric`, `desired_coverage_limit`, `required_coverage_e_limit`, `vehicle_count` or `umbrella_details.motorized_vehicle_count`, `motorcycles`, `antique_vehicles`, `jet_skis`, `large_watercraft`, `property_count`, `non_us_property_count`, `current_auto_coverages`, `professional_entertainer_or_public_figure`, `household_open_claim`, `liability_loss_in_last_5_years`, `liability_loss_over_50k`, `four_or_more_losses_over_25k`, `reckless_driving_conviction`, and `felony`.
+   Avoid non-canonical consumer keys such as `street`, `city`, `state`, `zip`, `drivers_license_state`, `drivers_license_number`, `net_worth`, or `desired_umbrella_liability_limit`.
+   Do not send `vehicles` rows before submission. Use `vehicle_count` or `umbrella_details.motorized_vehicle_count` for the household vehicle count; actual vehicle details are collected later only if the selected offer requires them, such as a Markel bind follow-up.
+
+   Example initial consumer-prefill payload:
+
+   ```json
+   {
+     "credit_consent_pending": true,
+     "intake": {
+       "full_name": "Taylor Example",
+       "email": "taylor@example.com",
+       "marital_status": "married",
+       "occupation": "product designer",
+       "line_of_work": "software",
+       "license_state": "CA",
+       "license_number": "D0000001",
+       "spouse_full_name": "Avery Example",
+       "spouse_birthday": "1988-08-09",
+       "spouse_license_state": "CA",
+       "spouse_license_number": "A0000001",
+       "address": {
+         "street": "742 Evergreen Terrace",
+         "city": "San Francisco",
+         "state": "CA",
+         "zip": "94110"
+       },
+       "approximate_asset_value": "$2.5M",
+       "desired_coverage_limit": 2500000,
+       "required_coverage_e_limit": 300000,
+       "vehicle_count": 2,
+       "motorcycles": 0,
+       "antique_vehicles": 0,
+       "jet_skis": 0,
+       "large_watercraft": 0,
+       "property_count": 1,
+       "non_us_property_count": 0,
+       "current_auto_coverages": "unsure",
+       "professional_entertainer_or_public_figure": false,
+       "household_open_claim": false,
+       "liability_loss_in_last_5_years": false,
+       "liability_loss_over_50k": false,
+       "four_or_more_losses_over_25k": false,
+       "reckless_driving_conviction": false,
+       "felony": false
+     }
+   }
+   ```
 3. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Treat `review_summary` as a checkpoint snapshot, not the final decision about whether the human needs to be interrupted yet. Until a later follow-up response shows quote progress, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. If it already includes a `review` preview plus a bundled `next_question` for shopper-owned details such as full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, use that as the one review turn rather than falling back to a one-field questionnaire. Ask only for the explicitly missing shopper-owned fields staged there, and keep already reviewed values in the review section for corrections-only instead of asking the shopper to re-key them. If marital status means Coverage Cat still needs spouse or partner identity or license fields, keep spouse full name, spouse date of birth, spouse driver's license state, and spouse driver's license number in that same review turn instead of opening a second follow-up. When you summarize the gathered details or remaining items, use short labeled bullets or sections rather than a prose paragraph. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 4. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with the latest `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data.
 5. Use `resume_url` only as the browser fallback when your runtime cannot continue in chat or the user explicitly wants Coverage Cat's UI on `/umbrella?resume=...`.
@@ -83,12 +131,12 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
 1. Call `GET /api/intake/:uid/issues` with the latest `Authorization: Bearer <intake_access_token>` to inspect what still blocks submission, any `pending_fields`, any estimated `field_estimates`, and the final `review` JSON once the intake is ready. Every successful response rotates a fresh `intake_access_token`; replace the old one immediately.
-2. Use `PATCH /api/intake/:uid` with that same bearer token only for pre-submit review corrections, inferred umbrella values plus matching top-level `field_estimates[]` rows, and the final submit step. Do not overload this patch endpoint with offer selection or post-choose bind fields.
+2. Use `PATCH /api/intake/:uid` with that same bearer token only for pre-submit review corrections, canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count`, optional top-level `field_estimates[]` rows whose `field` paths you are certain match the current umbrella review, and the final submit step. Never send `vehicles` rows on this pre-submit patch endpoint. Do not overload this patch endpoint with offer selection or post-choose bind fields.
 3. Keep the human out of the loop until Coverage Cat has either reached `ready_for_submission` or returned a staged `review` preview plus a bundled `next_question` for the final shopper-owned details. If Coverage Cat still returns other `pending_fields` or a narrower `next_question`, keep filling them from user-controlled context or your own reasoning first. The intended UX is that the user sees one final completed review step, not a questionnaire.
 4. On that single review turn, render `resource.review` as short labeled bullets or sections, not as a prose paragraph. Start by saying explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. If `next_question` is also present there, ask once only for the explicitly missing shopper-owned fields in it in plain English and list those requested items as bullets. Keep already reviewed values in the review section and invite corrections there instead of asking the shopper to re-key them. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. When that missing-fields bundle covers full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, collect those together in the same message as any free-text corrections. If `next_question` also includes spouse_full_name, spouse_birthday, spouse_license_state, or spouse_license_number because marital status requires them, collect that spouse bundle in the same review message too instead of opening a second follow-up. If the user confirms the application in that same reply, send one final `PATCH /api/intake/:uid` carrying those edits plus `confirm_submission: true`. Preliminary umbrella quotes do not require credit consent; the soft-credit pull authorization is collected after the user chooses an offer.
 5. After submit, continue polling `GET /api/intake/:uid/issues` with the latest bearer token. Once Coverage Cat has the first batch of quotes, this endpoint returns structured umbrella offers for pre-choose review in chat, including per-offer `selection_token` values and detailed post-choose status payloads. Do not collapse that list down to only the recommended default offer when alternatives are present. Render the offers as a single markdown table with columns `Carrier | Coverage limit | Annual price | Min. auto limits | Notes` (one row per offer, recommended first, `(Recommended)` in the Notes column of the recommended row), and never restate the same offer as a prose bullet. Below the table, add a `**Next steps to purchase:**` bulleted checklist that covers picking an offer, confirming Min. auto limits when shown, uploading declarations when Monoline or Markel is present (about 5-10 minutes to checkout after upload), and saying `Yes` to the soft-credit-pull consent Coverage Cat requests after selection.
 6. When the user chooses an offer, call `POST /api/intake/:uid/select` with the latest bearer token, `selection_token`, `selection_confirmed: true`, and the real user's affirmative `credit_consent` only when Coverage Cat asks for it. Successful responses return detailed statuses such as `needs_more_info_to_bind`, `documents_needed`, `payment_needed`, `waiting_on_carrier`, or `bound`, plus a fresh token for the next follow-up call.
-7. If `select` or `issues` returns `needs_more_info_to_bind` or `ready_to_finalize`, call `POST /api/intake/:uid/bind` with the latest bearer token and only the current `next_question` fields inside `intake`. When the response says `ready_to_finalize`, call `bind` again with the same `uid` and no `intake` patch.
+7. If `select` or `issues` returns `needs_more_info_to_bind` or `ready_to_finalize`, call `POST /api/intake/:uid/bind` with the latest bearer token and only the current `next_question` fields inside `intake`. This later bind-stage follow-up is where actual vehicle details may be requested for selected offers such as Markel; do not move that request into the pre-submit review. When the response says `ready_to_finalize`, call `bind` again with the same `uid` and no `intake` patch.
 8. If `select`, `bind`, or `issues` returns `documents_needed`, upload declarations through `POST /api/intake/:uid/attach` with the latest bearer token, `filename`, base64 `content`, and `type` in `declarations | auto_declarations`. Use `attach` only after selection and only when Coverage Cat explicitly asks for documents.
 9. If Coverage Cat returns `payment_needed`, share `payment_url` and let Coverage Cat's browser handle secure payment or carrier e-sign. Keep `GET /api/intake/:uid/issues` as the structured polling loop for post-choose processing, `waiting_on_carrier`, and `bound`.
 10. Keep `GET /api/consumer/status?token=...` as the coarse fallback if you only need non-PII progress.
@@ -136,7 +184,7 @@ Keep the conversation short, safe, and user-led:
 1. Pick the path first. Use the consumer-prefill handoff when you are working from the user's own context, and the delegated loop when you have an operator bearer key plus approved back-office context.
 2. Search that available context first and assemble the fullest umbrella application you can before involving the human.
 3. Keep the returned `uid`, `intake_access_token`, and `polling_token` together; they are the full consumer handoff state for chat continuation. Replace `intake_access_token` whenever a direct follow-up response rotates it.
-4. Send non-user-confirmed values in `intake` and attach matching `field_estimates` metadata so Coverage Cat can persist provenance and mark them in review.
+4. On delegated umbrella draft calls, send non-user-confirmed values in `intake` and attach matching `field_estimates` metadata so Coverage Cat can persist provenance and mark them in review. On the initial consumer umbrella prefill handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
 5. Keep `needs_more_info` behind the scenes when you can. The intended UX is that the human sees only the completed review page, or at most one staged review turn that also gathers the final shopper-owned details bundle.
 6. On every pre-submit user-facing turn, explicitly say the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 7. When Coverage Cat returns `ready_for_review`, or when a consumer follow-up payload carries a staged `review` plus bundled shopper-detail `next_question`, render the completed application as short labeled bullets or sections sourced from the review JSON. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. If that staged bundle includes spouse or partner identity or license fields because marital status requires them, keep those spouse fields in the same single review turn instead of creating a second questionnaire. Do not ask for credit consent yet — it is collected after the user chooses an offer.
@@ -156,11 +204,13 @@ Keep the conversation short, safe, and user-led:
 - On a cold start, do not open by asking for name, email, phone, full address, birthday, marital status, driver's license number, or net worth. Read the machine-readable docs, call consumer prefill first with the fullest estimate you can justify, then use Coverage Cat's staged review turn to collect the shopper-owned bundle once.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Do not surface `needs_more_info` as a step-by-step questionnaire unless your product intentionally falls back to one after exhausting operator-side context. The intended umbrella UX is a single review page followed by offers.
+- For consumer umbrella handoffs, use canonical keys such as `address.{street,city,state,zip}`, `license_state`, `license_number`, `approximate_asset_value` or `net_worth_numeric`, `desired_coverage_limit`, `required_coverage_e_limit`, and `vehicle_count` or `umbrella_details.motorized_vehicle_count` for umbrella counts. Avoid top-level `street`/`city`/`state`/`zip`, `drivers_license_state`, `drivers_license_number`, `net_worth`, or `desired_umbrella_liability_limit`.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the shopper, use short labeled bullets or sections rather than a prose paragraph.
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - If Coverage Cat stages a review plus shopper-detail `next_question`, show the assembled review and ask only for the explicitly missing shopper-owned fields together in one message, in plain English rather than field names. Keep already reviewed values in the review section for corrections-only instead of asking the shopper to re-key them. Keep the assembled review and the requested items in labeled bullets or sections. When it includes full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn instead of splitting it up. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver's license state, or spouse driver's license number, keep that spouse bundle in the same message too instead of opening a second follow-up.
-- Any value coming from CRM, documents, email threads, or heuristics that the human has not directly confirmed yet should be sent in `intake` with a matching `field_estimates` row carrying `field`, `source`, and `confidence`.
+- On delegated umbrella draft calls, any value coming from CRM, documents, email threads, or heuristics that the human has not directly confirmed yet should be sent in `intake` with a matching `field_estimates` row carrying `field`, `source`, and `confidence`. On the initial consumer umbrella handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
+- Do not send `vehicles` rows before submission. Use `vehicle_count` or `umbrella_details.motorized_vehicle_count` for the household vehicle count, and if the staged review shows the wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you surface the final review.
 - Do not ask for credit consent until the user has chosen an offer and Coverage Cat requests it at `select`.
 - When quoted offers include Monoline or Markel, explain during quote review that current home and auto declarations are still required before payment and that secure checkout is usually ready within about 5-10 minutes once those uploads are on file.
 - Use `resume_url` only as a browser fallback. When Coverage Cat reaches `payment_needed` or carrier-managed signing, hand the user to the returned browser URL instead of collecting payment or e-sign details in chat.
