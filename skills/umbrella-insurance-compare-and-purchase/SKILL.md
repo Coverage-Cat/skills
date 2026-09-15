@@ -13,7 +13,9 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 
 ## Start Here
 
-1. If your runtime supports MCP, register `/.well-known/mcp.json` and default consumer-operated umbrella runs to the product MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.com/.well-known/agents.txt`; those files route agents to Coverage Cat's MCP, REST, markdown, and browser-fallback resources. Do not drive the browser UI unless Coverage Cat should take over the shopper-facing flow.
+
+1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated umbrella runs to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
@@ -27,7 +29,8 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 ## Choose The Path
 
 1. Use the consumer-prefill path when there is no operator key or when the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
-2. On the product MCP, keep consumer-operated umbrella runs on that same subset through quote review, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated tools just to reach checkout.
+2. On the default consumer MCP, keep consumer-operated umbrella runs on that same subset through quote review, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated tools just to reach checkout. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
+3. Use the delegated operator MCP or delegated umbrella API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
 3. Use the delegated operator path only when you already have a real Coverage Cat operator bearer key and approved back-office context.
 4. Do not mix the consumer-prefill and delegated paths in one session.
 
@@ -53,13 +56,15 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 
 - If the user asks Coverage Cat to shop for or buy umbrella insurance, start this purchase skill instead of the read-only umbrella calculator.
 - Prefill from the user's own context before asking a single question.
-- On a cold start, call `POST /api/consumer/umbrella/prefill` before you ask the shopper a questionnaire. Send the fullest estimate you can justify from the shopper's own context first.
-- When the product MCP is available, use the consumer-operated subset named above instead of switching to delegated umbrella tools without operator auth.
+- On a cold start, call `POST /api/consumer/umbrella/prefill` before you ask the shopper a questionnaire. Send the fullest estimate you can justify from the shopper's own context first. On the initial consumer-prefill handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
+- For consumer umbrella handoffs, use canonical keys such as `address.{street,city,state,zip}`, `license_state`, `license_number`, `approximate_asset_value` or `net_worth_numeric`, `desired_coverage_limit`, `required_coverage_e_limit`, and `vehicle_count` or `umbrella_details.motorized_vehicle_count` for umbrella counts. Avoid top-level `street`/`city`/`state`/`zip`, `drivers_license_state`, `drivers_license_number`, `net_worth`, or `desired_umbrella_liability_limit`.
+- Do not send `vehicles` rows before submission. Use `vehicle_count` or `umbrella_details.motorized_vehicle_count` for the household vehicle count; actual vehicle details stay in the later bind-stage flow if a selected offer requires them, such as Markel. If the staged review shows the wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you surface the final review.
+- When the default consumer MCP is available, use the consumer-operated subset named above instead of switching to delegated umbrella tools without operator auth.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the shopper, use short labeled bullets or sections rather than a prose paragraph.
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - Keep the user out of the loop until `GET /api/intake/:uid/issues` reaches `ready_for_submission`, or until that payload already carries a staged `review` plus bundled `next_question` for the shopper-owned details Coverage Cat still needs.
-- On that staged review turn, ask for the shopper-owned bundle together in plain English rather than one field at a time. Keep the assembled review and the requested items in labeled bullets or sections. When Coverage Cat asks for full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn and let the user send corrections in the same reply. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver's license state, or spouse driver's license number, keep that spouse bundle in the same message too instead of opening a second follow-up.
+- On that staged review turn, ask only for the explicitly missing shopper-owned fields together in plain English rather than one field at a time. Keep already reviewed values in the review section and invite corrections in the same reply instead of asking the shopper to re-key them. Keep the assembled review and the requested items in labeled bullets or sections. When Coverage Cat asks for full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that missing-fields bundle as one turn and let the user send corrections in the same reply. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver's license state, or spouse driver's license number, keep that spouse bundle in the same message too instead of opening a second follow-up.
 - If the shopper gives a birthday in normal US `MM-DD-YYYY` form, normalize it to `YYYY-MM-DD` before you patch Coverage Cat.
 - Keep the returned `uid` plus the freshest rotated `intake_access_token`, continue the direct `/api/intake/:uid/...` follow-up loop in chat, and use `resume_url` only as a browser fallback.
 - Use an operator-issued bearer token for every delegated umbrella endpoint.
