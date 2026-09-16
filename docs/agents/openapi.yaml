@@ -263,7 +263,7 @@ components:
       properties:
         credit_consent:
           additionalProperties: false
-          description: Real-user soft-credit consent collected on the selection turn when Coverage Cat asks for it.
+          description: Real-user consent for a soft credit check, collected on the selection turn when Coverage Cat asks for it.
           properties:
             answer:
               enum:
@@ -275,6 +275,10 @@ components:
           required:
             - answer
             - collected_from_user
+          type: object
+        intake:
+          additionalProperties: true
+          description: Optional bind-stage answers for the current `next_question` when Coverage Cat asked for consent and bind details together on the same shopper-facing turn.
           type: object
         selection_confirmed:
           const: true
@@ -456,6 +460,10 @@ components:
           type: integer
         recommended:
           type: boolean
+        sample_policy_url:
+          description: Public specimen-policy PDF for this carrier in the shopper's state, when Coverage Cat has one on file.
+          format: uri
+          type: string
         selection_token:
           type: string
       type: object
@@ -465,7 +473,17 @@ components:
         intake:
           additionalProperties: true
           description: |
-            Partial homeowners intake patch containing the fullest currently known applicant and property facts you can assemble from approved operator-side context. For any non-user-confirmed home value you include under `intake.home[]`, also include a matching `intake.home[].field_estimates[]` row using the same object shape returned in responses. Those rows should mirror the current field value, carry an opaque provenance `source`, set `confirmed_by_user: false`, and include `estimated_at`; Coverage Cat will persist that value as an estimate and send the homeowner back through review before final bind in the consumer portal. Recommended submit pattern: omit or keep `credit_check_authorized` false until the real homeowner has reviewed the assembled application and explicitly consented to a soft credit pull that does not affect their credit score, then resend the same `uid` with `credit_check_authorized: true`. Do NOT derive homeowners dwelling replacement cost from purchase price or appraised value — that field must come from a Replacement Cost Estimator or be left for Coverage Cat's carrier-side estimator to fill. Do NOT send lender-side fields (note_rate, term_months, escrow flags); Coverage Cat prices homeowners premium directly and those inputs have no effect on the intake. Optional mortgage metadata such as `intake.home[].loans[].lender_name`, `loan_number`, `mortgagee_clause`, and `loan_effective_date` may be sent when available; partial loan rows are accepted. For enum/list fields, treat the `schema` and `missing_fields[].enum` returned by this endpoint as the authoritative allowed vocabulary for the current intake state.
+            Partial homeowners intake patch containing the fullest currently known applicant and property facts you can assemble from approved operator-side context. On the first create call, `intake.home` must already identify whether each property is standard homeowners, condo, or landlord coverage: send both a non-rental `home_ownership` and a non-condo `property_type` for standard homeowners, `property_type: condo` for condo coverage, or `home_ownership: owned_rental` / a rented `rental_status` for landlord coverage. Coverage Cat rejects the first create call instead of guessing if that product-selection row is missing. This endpoint accepts partial follow-up patches after create; for a given intake's live requiredness, treat the returned `schema` and `missing_fields[].enum` as authoritative. Common eventual base requirements include `home_sqft`, `new_purchase`, the property address, `home_ownership`, and `property_type`, with state- and property-specific follow-ups returned in `missing_fields`. For any non-user-confirmed home value you include under `intake.home[]`, also include a matching `intake.home[].field_estimates[]` row using the same object shape returned in responses. Those rows should mirror the current field value, carry an opaque provenance `source`, set `confirmed_by_user: false`, and include `estimated_at`; Coverage Cat will persist that value as an estimate and send the homeowner back through review before final bind in the consumer portal. Treat `credit_check_authorized` as the real homeowner's explicit authorization for Coverage Cat's soft credit pull on the assembled application. If the operator already collected that exact consent separately, a complete first create call may include `credit_check_authorized: true`. Otherwise omit or keep `credit_check_authorized` false until the homeowner has reviewed the assembled application and explicitly consented to the soft credit pull. Do NOT derive homeowners dwelling replacement cost from purchase price or appraised value — that field must come from a Replacement Cost Estimator or be left for Coverage Cat's carrier-side estimator to fill. Do NOT send lender-side fields (note_rate, term_months, escrow flags); Coverage Cat prices homeowners premium directly and those inputs have no effect on the intake. Optional mortgage metadata such as `intake.home[].loans[].lender_name`, `loan_number`, `mortgagee_clause`, and `loan_effective_date` may be sent when available; partial loan rows are accepted. For enum/list fields, treat the `schema` and `missing_fields[].enum` returned by this endpoint as the authoritative allowed vocabulary for the current intake state.
+          properties:
+            home:
+              description: |
+                Initial product-selection row for the first create call. Send a single object or an array, and make sure each home row already distinguishes standard homeowners, condo, or landlord coverage. Later update or poll calls may omit `home` when unchanged.
+              oneOf:
+                - $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
+                - items:
+                    $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
+                  minItems: 1
+                  type: array
           type: object
         sandbox:
           description: |
@@ -615,7 +633,7 @@ components:
       properties:
         credit_consent_pending:
           const: true
-          description: Must be true. Signals that the user has not yet been shown the review page. Homeowners handoffs collect the soft-credit consent on that review turn; umbrella handoffs defer credit consent until the user chooses an offer at `select`.
+          description: Must be true. Signals that the user has not yet been shown the review page. Homeowners handoffs collect consent for a soft credit check on that review turn; umbrella handoffs defer credit consent until the user chooses an offer at `select`.
           type: boolean
         field_estimates:
           description: Optional estimate metadata for values that are defensible but not yet directly confirmed by the user.
@@ -626,6 +644,92 @@ components:
         intake:
           additionalProperties: true
           description: Fullest currently known consumer application patch assembled from the user's own context before any piecemeal follow-up.
+          type: object
+      required:
+        - intake
+        - credit_consent_pending
+      type: object
+    ConsumerHomeownersInitialHome:
+      additionalProperties: true
+      anyOf:
+        - description: Standard homeowners coverage. Send both a non-rental home_ownership and a non-condo property_type.
+          properties:
+            home_ownership:
+              enum:
+                - owned_primary
+                - owned_seasonal
+                - under_construction
+              type: string
+            property_type:
+              enum:
+                - single_family
+                - duplex
+                - triplex
+                - quadplex
+                - apartment
+                - townhouse
+                - manufacture_or_mobile
+              type: string
+          required:
+            - home_ownership
+            - property_type
+          type: object
+        - description: 'Condo coverage. Send property_type: condo.'
+          properties:
+            property_type:
+              const: condo
+              type: string
+          required:
+            - property_type
+          type: object
+        - description: 'Landlord coverage. Send home_ownership: owned_rental.'
+          properties:
+            home_ownership:
+              const: owned_rental
+              type: string
+          required:
+            - home_ownership
+          type: object
+        - description: Landlord coverage. A rented rental_status also counts when home_ownership is not yet known.
+          properties:
+            rental_status:
+              enum:
+                - room
+                - attached_unit
+                - detached_unit
+              type: string
+          required:
+            - rental_status
+          type: object
+      description: Initial homeowners home row. Coverage Cat needs this row to distinguish standard homeowners, condo, or landlord coverage before it can assemble the rest of the application.
+      type: object
+    ConsumerHomeownersPrefillRequest:
+      additionalProperties: false
+      properties:
+        credit_consent_pending:
+          const: true
+          description: Must be true. Signals that the user has not yet been shown the review page. Homeowners handoffs collect consent for a soft credit check on that review turn; umbrella handoffs defer credit consent until the user chooses an offer at `select`.
+          type: boolean
+        field_estimates:
+          description: Optional estimate metadata for values that are defensible but not yet directly confirmed by the user.
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        intake:
+          additionalProperties: true
+          description: Fullest currently known consumer homeowners application patch assembled from the user's own context before any piecemeal follow-up. The first create call must already identify whether the property is standard homeowners, condo, or landlord coverage.
+          properties:
+            home:
+              description: Initial product-selection row for the first create call. Send a single object or an array, and make sure the first home row already distinguishes standard homeowners, condo, or landlord coverage.
+              oneOf:
+                - $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
+                - items:
+                    $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
+                  minItems: 1
+                  type: array
+          required:
+            - home
           type: object
       required:
         - intake
@@ -899,7 +1003,7 @@ components:
         credit_consent:
           additionalProperties: false
           description: |
-            Real-user soft-credit consent. Required before Coverage Cat can bind a chosen offer. If omitted or declined, Coverage Cat returns `credit_consent_required` with the prompt to render.
+            Real-user consent for a soft credit check. Required before Coverage Cat can bind a chosen offer. If omitted or declined, Coverage Cat returns `credit_consent_required` with the prompt to render.
           properties:
             answer:
               description: Must be the real user's answer. Only Yes authorizes the pull.
@@ -1133,7 +1237,7 @@ components:
           type: string
         credit_consent_question:
           description: |
-            Present when Coverage Cat needs the real user's soft-credit consent before binding an offer, typically returned from `select` with `status: credit_consent_required`.
+            Present when Coverage Cat needs the real user's consent for a soft credit check before binding an offer, typically returned from `select` with `status: credit_consent_required`.
           type: string
         fallback_step:
           $ref: '#/components/schemas/FallbackStep'
@@ -1256,7 +1360,7 @@ components:
       description: 'Partial intake patch for the first-party assistant follow-up API. Send user-confirmed edits directly as top-level intake fields. For umbrella intakes, top-level field_estimates[] rows may accompany inferred values. Set confirm_submission: true on the final one-time review turn to submit and start quote generation.'
       properties:
         confirm_submission:
-          description: 'Set to true on the single human review turn once the user has reviewed the application and wants Coverage Cat to submit now. Homeowners also require credit_check_authorized: true on that same final turn; umbrella soft-credit consent is collected later at select.'
+          description: 'Set to true on the single human review turn once the user has reviewed the application and wants Coverage Cat to submit now. Homeowners also require credit_check_authorized: true on that same final turn; umbrella consent for a soft credit check is collected later at select.'
           type: boolean
         field_estimates:
           description: Umbrella-only estimate metadata for inferred values included in the same patch. Homeowners estimate provenance stays under intake.home[].field_estimates[].
@@ -1363,7 +1467,7 @@ components:
       type: http
 info:
   description: |-
-    Delegated-agent APIs for Coverage Cat purchase workflows and read-only insurance tools. Umbrella delegated purchase is a one-review-page flow: the operator-side agent fills the application from allowed context, Coverage Cat returns estimated-field metadata, and the human only reviews or corrects the final JSON before preliminary quotes are generated. Credit consent is collected after the user chooses an offer, at the `select` step, before Coverage Cat can bind. Homeowners delegated purchase is a near-single-endpoint operator flow: gather the fullest approved-context application first, mark non-user- confirmed home values with `field_estimates`, hold back `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly consented to a soft credit pull, then let Coverage Cat submit and quote the intake asynchronously and route the homeowner back through portal review for any remaining estimated home answers before final bind. Coverage Cat also exposes public consumer handoff endpoints at `/api/consumer/umbrella/prefill`, `/api/consumer/homeowners/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`. On the direct follow-up path, authenticate with the latest rotated `intake_access_token`, use `PATCH /api/intake/{uid}` only for pre-submit review, correction, and submission, and continue umbrella post-choose follow-up through `/api/intake/{uid}/select`, `/api/intake/{uid}/bind`, and `/api/intake/{uid}/attach`.
+    Delegated-agent APIs for Coverage Cat purchase workflows and read-only insurance tools. Umbrella delegated purchase is a one-review-page flow: the operator-side agent fills the application from allowed context, Coverage Cat returns estimated-field metadata, and the human only reviews or corrects the final JSON before preliminary quotes are generated. Credit consent is collected after the user chooses an offer, at the `select` step, before Coverage Cat can bind. Homeowners delegated purchase is a near-single-endpoint operator flow: gather the fullest approved-context application first, mark non-user- confirmed home values with `field_estimates`, treat `credit_check_authorized` as the real homeowner's explicit authorization for Coverage Cat's soft credit pull on the assembled application, allow a first complete create call to include it when the operator already collected that exact consent separately, otherwise hold it back until review, then let Coverage Cat submit and quote the intake asynchronously and route the homeowner back through portal review for any remaining estimated home answers before final bind. Coverage Cat also exposes public consumer handoff endpoints at `/api/consumer/umbrella/prefill`, `/api/consumer/homeowners/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`. On the direct follow-up path, authenticate with the latest rotated `intake_access_token`, use `PATCH /api/intake/{uid}` only for pre-submit review, correction, and submission, and continue umbrella post-choose follow-up through `/api/intake/{uid}/select`, `/api/intake/{uid}/bind`, and `/api/intake/{uid}/attach`.
 
     Versioning: send the optional `Coverage-Cat-API-Version: v1` header to pin the stable agent API contract explicitly.
 
@@ -2264,7 +2368,7 @@ paths:
   /api/agent/homeowners/quotes:
     post:
       description: |
-        Use this endpoint as the primary operator-side enrichment loop for delegated homeowners purchase. Omit `uid` to create a new intake. Reuse the returned `uid` on every follow-up call. Start with the fullest intake patch you can assemble from approved operator-side context, and for any non-user-confirmed home value include matching `intake.home[].field_estimates` metadata. Hold back `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly authorized a soft credit pull that does not affect their credit score. If the only remaining `missing_fields` entry is `credit_check_authorized`, render that one-time review step from your current application summary, then resend the same `uid` with `credit_check_authorized: true`. Do not break the intended second turn into a standalone current-policy-expiration question; if `policy_expire` is the remaining review gap, Coverage Cat can carry an estimated `policy_expire` value two months from today into that same review step. If `status` is `needs_more_info`, keep filling the returned `missing_fields` behind the scenes from your own systems first and only escalate to the human after approved context is exhausted. When Coverage Cat returns `homeowner_fix_issues_request_login_url`, share that safe sign-in request page if you want the homeowner to complete the remaining items in Coverage Cat's GUI. If `status` is `pending_quotes`, poll this same endpoint with the same `uid`. If `status` is `quoted`, summarize the returned offers and optionally share `homeowner_quotes_request_login_url`, where the homeowner can request their own login link before reviewing any unconfirmed estimated home answers and finishing bind in Coverage Cat's consumer portal. Set `sandbox: true` only on the first create call when you want mocked delegated homeowners test data instead of live customer email or carrier traffic.
+        Use this endpoint as the primary operator-side enrichment loop for delegated homeowners purchase. Omit `uid` to create a new intake. Reuse the returned `uid` on every follow-up call. Start with the fullest intake patch you can assemble from approved operator-side context, and for any non-user-confirmed home value include matching `intake.home[].field_estimates` metadata. Treat `credit_check_authorized` as the real homeowner's explicit authorization for Coverage Cat's soft credit pull on the assembled application. If the operator already collected that exact consent separately, a complete first create call may include `credit_check_authorized: true`. Otherwise hold it back until the homeowner has reviewed the assembled application and explicitly authorized the soft credit pull. If the only remaining `missing_fields` entry is `credit_check_authorized`, render that one-time review step from your current application summary, then resend the same `uid` with `credit_check_authorized: true`. Do not break the intended second turn into a standalone current-policy-expiration question; if `policy_expire` is the remaining review gap, Coverage Cat can carry an estimated `policy_expire` value two months from today into that same review step. If `status` is `needs_more_info`, keep filling the returned `missing_fields` behind the scenes from your own systems first and only escalate to the human after approved context is exhausted. When Coverage Cat returns `homeowner_fix_issues_request_login_url`, share that safe sign-in request page if you want the homeowner to complete the remaining items in Coverage Cat's GUI. If `status` is `pending_quotes`, poll this same endpoint with the same `uid`. If `status` is `quoted`, summarize the returned offers and optionally share `homeowner_quotes_request_login_url`, where the homeowner can request their own login link before reviewing any unconfirmed estimated home answers and finishing bind in Coverage Cat's consumer portal. Set `sandbox: true` only on the first create call when you want mocked delegated homeowners test data instead of live customer email or carrier traffic.
       operationId: quote_delegated_homeowners_application
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -3690,7 +3794,34 @@ paths:
       x-openai-isConsequential: false
   /api/consumer/homeowners/prefill:
     post:
-      description: Accepts the fullest consumer homeowners application you can assemble, prepares Coverage Cat's one-shot review and soft-credit consent checkpoint, and returns the handoff `uid`, a rotating `intake_access_token` for direct API follow-up, a short-lived `/intake?resume=...` browser fallback URL, and a coarse public `polling_token`. On a cold start, ask only for the shopper's full name, email, and property address first; then recover core shopper and occupancy facts such as date of birth, marital status, and owner-occupied vs new-purchase from user-controlled context before calling this endpoint. Until a later follow-up response shows quote progress, the application is not submitted yet. Coverage Cat can then estimate many reviewable home fields for the review card, and if current-policy expiration would otherwise become the only missing field before review it can carry an estimated `policy_expire` value two months from today into that same one-time review turn. On the review turn, tell the shopper explicitly that Coverage Cat has not submitted the application yet, ask for any remaining items or the soft-credit Yes/No in plain English, and render gathered details plus remaining items as short labeled bullets or sections rather than a prose paragraph. Successful direct follow-up responses rotate a fresh `intake_access_token`; always reuse the newest token you have.
+      description: >-
+        Accepts the fullest consumer homeowners application you can assemble,
+        prepares Coverage Cat's one-shot review and soft-credit consent
+        checkpoint, and returns the handoff `uid`, a rotating
+        `intake_access_token` for direct API follow-up, a short-lived
+        `/intake?resume=...` browser fallback URL, and a coarse public
+        `polling_token`. On a cold start, ask only for the shopper's full
+        name, email, property address, and whether the property should be
+        treated as standard homeowners, condo, or landlord coverage first. The
+        initial `intake.home[0]` data must preserve that distinction by sending
+        `home_ownership: owned_rental` or a rented `rental_status` for
+        landlord coverage, `property_type: condo` for condo coverage, or both
+        a non-rental `home_ownership` and a non-condo `property_type` for
+        standard homeowners coverage. Then recover core shopper and occupancy
+        facts such as date of birth, marital status, and owner-occupied vs
+        new-purchase from user-controlled context before calling this endpoint.
+        Until a later follow-up response shows quote progress, the application
+        is not submitted yet. Coverage Cat can then estimate many reviewable
+        home fields for the review card, and if current-policy expiration would
+        otherwise become the only missing field before review it can carry an
+        estimated `policy_expire` value two months from today into that same
+        one-time review turn. On the review turn, tell the shopper explicitly
+        that Coverage Cat has not submitted the application yet, ask for any
+        remaining items or the soft-credit Yes/No in plain English, and render
+        gathered details plus remaining items as short labeled bullets or
+        sections rather than a prose paragraph. Successful direct follow-up
+        responses rotate a fresh `intake_access_token`; always reuse the newest
+        token you have.
       operationId: create_consumer_homeowners_prefill
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -3699,7 +3830,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConsumerPrefillRequest'
+              $ref: '#/components/schemas/ConsumerHomeownersPrefillRequest'
         required: true
       responses:
         '200':
@@ -4393,7 +4524,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}/issues:
     get:
-      description: 'Returns a line-aware follow-up payload for a consumer-prefill homeowners or umbrella intake uid. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Before submission, this exposes the one-time review checkpoint, any remaining missing values, and any reviewed estimated values, and the agent should say explicitly that the application is not submitted yet before asking for anything else. Present gathered details, review facts, and remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. For homeowners, treat those missing fields as a behind-the-scenes enrichment backlog rather than a first-turn questionnaire, and keep recovering context-backed answers until the payload is ready for one review card. For umbrella, Coverage Cat may keep `status: needs_more_info` while still returning a staged `review` preview plus a bundled `next_question` for the final shopper-owned review turn, so the assistant can collect only the explicitly missing details such as full name, email, phone, full address, birthday, marital status, driver''s license state, driver''s license number, net worth, and any corrections in one message rather than one field at a time, while leaving already reviewed estimated facts on the review card for corrections-only. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver''s license state, or spouse driver''s license number, keep that spouse bundle in the same message rather than opening a second follow-up. If Coverage Cat says it reused a recent in-progress umbrella draft for the same email address, explain that reviewed values may come from that earlier unfinished Coverage Cat application rather than from `historical_mode` unless the matching `field_estimates` row says so. After submission, it exposes quote progress, structured umbrella offers with `selection_token`, detailed post-choose umbrella states, and a refreshed `intake_access_token` for the next direct follow-up call. When quoted agency-pay offers are present, `response_summary` may already explain that current home and auto declarations are required before payment and that secure checkout is usually ready within about 5-10 minutes after uploads are on file.'
+      description: 'Returns a line-aware follow-up payload for a consumer-prefill homeowners or umbrella intake uid. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Before submission, this exposes the one-time review checkpoint, any remaining missing values, and any reviewed estimated values, and the agent should say explicitly that the application is not submitted yet before asking for anything else. Present gathered details, review facts, and remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. For homeowners, treat those missing fields as a behind-the-scenes enrichment backlog rather than a first-turn questionnaire, and keep recovering context-backed answers until the payload is ready for one review card. For umbrella, Coverage Cat may keep `status: needs_more_info` while still returning a staged `review` preview plus a bundled `next_question` for the final shopper-owned review turn, so the assistant can collect only the explicitly missing details such as full name, email, phone, full address, birthday, marital status, driver''s license state, driver''s license number, net worth, and any corrections in one message rather than one field at a time, while leaving already reviewed estimated facts on the review card for corrections-only. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver''s license state, or spouse driver''s license number, keep that spouse bundle in the same message rather than opening a second follow-up. If Coverage Cat says it reused a recent in-progress umbrella draft for the same email address, explain that reviewed values may come from that earlier unfinished Coverage Cat application rather than from `historical_mode` unless the matching `field_estimates` row says so. After submission, it exposes quote progress, structured umbrella offers with `selection_token`, per-offer `sample_policy_url` links when Coverage Cat has specimen policies on file, detailed post-choose umbrella states, and a refreshed `intake_access_token` for the next direct follow-up call. When quoted agency-pay offers are present, `response_summary` may already explain that current home and auto declarations are required before payment and that secure checkout is usually ready within about 5-10 minutes after uploads are on file.'
       operationId: get_first_party_intake_issues
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
@@ -4500,7 +4631,7 @@ paths:
       x-openai-isConsequential: false
   /api/intake/{uid}/select:
     post:
-      description: 'Use this only after `GET /api/intake/{uid}/issues` returns structured umbrella offers with `selection_token`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Coverage Cat collects soft-credit consent here, after the user chooses an offer. Successful responses return detailed post-choose states such as `needs_more_info_to_bind`, `documents_needed`, `payment_needed`, or `waiting_on_carrier` rather than collapsing back into a coarse quoted bucket. For Monoline and Markel, Coverage Cat may require declarations uploads first; once those uploads are on file, `documents_pending_review` usually transitions to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel.'
+      description: 'Use this only after `GET /api/intake/{uid}/issues` returns structured umbrella offers with `selection_token`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Coverage Cat collects consent for a soft credit check here, after the user chooses an offer. If Coverage Cat returns `credit_consent_required` with a bind-stage `next_question`, ask for both the soft-credit-check consent and those bind details in one shopper-facing turn, then retry this same endpoint with both `credit_consent` and the bind-stage answers under `intake`. Successful responses return detailed post-choose states such as `needs_more_info_to_bind`, `documents_needed`, `payment_needed`, or `waiting_on_carrier` rather than collapsing back into a coarse quoted bucket. For Monoline and Markel, Coverage Cat may require declarations uploads first; once those uploads are on file, `documents_pending_review` usually transitions to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel.'
       operationId: select_consumer_umbrella_offer
       parameters:
         - $ref: '#/components/parameters/IntakeUid'

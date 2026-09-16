@@ -34,8 +34,10 @@ curl -X POST https://www.coveragecat.com/api/consumer/homeowners/prefill \
   -H "Content-Type: application/json" \
   -H "Coverage-Cat-API-Version: v1" \
   -H "Idempotency-Key: consumer-home-prefill-001" \
-  -d '{"credit_consent_pending":true,"intake":{"full_name":"Taylor Example","home":[{}]}}'
+  -d '{"credit_consent_pending":true,"intake":{"full_name":"Taylor Example","home":[{"home_ownership":"owned_primary","property_type":"single_family"}]}}'
 ```
+
+That first `home[0]` row must already distinguish the product type: use `property_type: condo` for condo coverage, `home_ownership: owned_rental` or a rented `rental_status` for landlord coverage, or a non-rental `home_ownership` plus a non-condo `property_type` for standard homeowners coverage.
 
 Sandbox and errors: the consumer-prefill handoff does not use a separate sandbox flag, while the delegated operator path uses top-level `sandbox: true` only on the first create call for a rehearsal `uid`. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
 
@@ -56,7 +58,7 @@ This skill supports two different jobs. Pick one path first, because the consume
 ### Path 1: Consumer prefill handoff
 
 1. Use this path when the shopper wants their own AI agent to gather the fullest homeowners application from user-controlled context before a single review step, or when you do not have an operator key.
-2. On a cold start, if the user's full name, email, or property address are missing, ask only for those three items first. Do not open with date-of-birth, marital-status, property-type, new-purchase, or mortgage questions unless the user volunteers them or your runtime truly cannot continue any other way.
+2. On a cold start, if the user's full name, email, property address, or whether this should be standard homeowners, condo, or landlord coverage are missing, ask only for those items first. Do not open with date-of-birth, marital-status, new-purchase, or mortgage questions unless the user volunteers them or your runtime truly cannot continue any other way.
 3. As soon as you have a structured address, search the user's own context first, then defensible property sources such as property records, Zillow, and Realtor.com, to assemble the fullest intake you can before review.
 4. Before you call Coverage Cat, recover the core non-estimable profile and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether this is owner-occupied or a new purchase. Coverage Cat can estimate many reviewable home fields, but it does not infer every top-level shopper fact from an address alone, and if current-policy expiration is still missing you should carry it into review as an estimated value two months from today instead of turning it into a standalone second-turn question.
 5. Call `POST /api/consumer/homeowners/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
@@ -85,7 +87,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 1. Start with the fullest intake you can build from approved operator-side context.
 2. Reuse one `uid` through the whole lifecycle, and keep filling `missing_fields` from your own systems first. The target is 2-3 turns total including the final homeowner consent-submit turn, not a questionnaire.
 3. If you are rehearsing the flow, set top-level `sandbox: true` on the very first create call only. That `uid` stays sandbox-scoped, the first fully complete submit with explicit credit consent returns `pending_quotes`, and a later poll returns mocked offers without live customer email or carrier traffic.
-4. Hold back `credit_check_authorized` until the real homeowner reviews the assembled application and says yes to the soft-credit prompt. If you still see non-credit missing fields, keep enriching from approved context instead of bouncing them back to the homeowner.
+4. Treat `credit_check_authorized` as the real homeowner's explicit yes to Coverage Cat's soft-credit pull on the assembled application. If the operator already collected that exact consent separately, the first complete create call may include `credit_check_authorized: true`. Otherwise leave it omitted or `false` until that yes exists. If you still see non-credit missing fields, keep enriching from approved context instead of bouncing them back to the homeowner.
 5. After the first fully complete submit with explicit credit consent, expect `pending_quotes`, then poll the same `uid` or use the operator dashboard APIs.
 6. If the delegated intake still needs fixes, use `homeowner_fix_issues_request_login_url` or `POST /api/agent/homeowners/fix-issues-email` to hand the homeowner back to Coverage Cat's GUI without exposing a direct session URL.
 7. When offers are ready, summarize them and hand the homeowner to Coverage Cat with the safe sign-in request link for final selection and bind.
@@ -102,13 +104,13 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 ## Goal
 
 1. Search approved operator-side context first and assemble the fullest homeowners application you can before involving the human.
-2. On the consumer-prefill path, if you are starting cold, ask only for the user's full name, email, and property address; then search the user's own vault, prior messages, connected files, property records, Zillow, and Realtor.com before you ask for anything else.
+2. On the consumer-prefill path, if you are starting cold, ask only for the user's full name, email, property address, and whether the property should be treated as standard homeowners, condo, or landlord coverage; then search the user's own vault, prior messages, connected files, property records, Zillow, and Realtor.com before you ask for anything else.
 3. Recover core non-estimable shopper and occupancy facts from user-controlled context before you call Coverage Cat, especially date of birth, marital status, and whether the property is owner-occupied or a new purchase.
 4. Send non-user-confirmed home values in `intake.home[]` with matching `field_estimates[]` rows so Coverage Cat can preserve provenance and mark them for later review.
 5. Missing `policy_expire` should not block the one-time review turn. If it is still unknown, keep the second turn as the full review and submission request and carry an estimated `policy_expire` value two months from today into that review.
 6. Keep `needs_more_info` behind the scenes when you can. The intended UX is a single review-and-consent handoff, not a long questionnaire.
 7. On every pre-submit user-facing turn, explicitly say the application is not submitted yet and Coverage Cat has not received a submitted application yet.
-8. Withhold `credit_check_authorized` until the real homeowner has reviewed the assembled application and explicitly said yes to a soft credit pull.
+8. Treat `credit_check_authorized` as the real homeowner's explicit authorization for Coverage Cat's soft credit pull on the assembled application. If the operator already collected that exact consent separately, you may send `true` on the first complete create call; otherwise withhold it until that yes exists.
 9. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
 10. Once offers are ready, summarize them clearly and hand the homeowner to Coverage Cat's secure portal for final selection, estimated-field confirmation, and bind.
 11. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
@@ -117,10 +119,10 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
 - Lead with a compact framing statement such as: "I can gather your homeowners application, confirm it with you once, and then keep checking for quotes."
 - Pick the path first. Use the consumer-prefill handoff when no operator bearer key is present, and use the delegated operator loop only when a real key is already available.
-- On a cold start, ask only for the user's full name, email, and property address. Treat everything else as an enrichment problem first, not a first-turn questionnaire.
+- On a cold start, ask only for the user's full name, email, property address, and whether the property should be treated as standard homeowners, condo, or landlord coverage. If that coverage type is still unknown, ask the user to reply with exactly one of `standard homeowners`, `condo`, or `landlord`. Treat everything else as an enrichment problem first, not a first-turn questionnaire.
 - Reuse known facts and search the available context before asking the human anything: user-controlled vaults, prior messages, connected files, CRM records, loan files, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
-- Once you have a structured address, search user-controlled context, property records, Zillow, and Realtor.com before you ask for date of birth, marital status, ownership, property type, new_purchase, or mortgage details.
-- Recover date of birth, marital status, and owner-occupied/new-purchase facts from the user's own context before you rely on Coverage Cat's estimated review card. Coverage Cat estimates many home-editor fields, not every top-level shopper fact.
+- Once you have a structured address, search user-controlled context, property records, Zillow, and Realtor.com before you ask for date of birth, marital status, new_purchase, or mortgage details.
+- Recover date of birth, marital status, and owner-occupied/new-purchase facts from the user's own context before you rely on Coverage Cat's estimated review card. Coverage Cat estimates many home-editor fields, but the first payload still needs enough home_ownership/property_type data to preserve standard-homeowners vs condo vs landlord intent.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
 - Coverage Cat can enrich many reviewable home fields once it has a structured address. Prefer one completed estimated review card plus soft-credit consent over a long collection loop.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
@@ -128,7 +130,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - Do not interrupt the first follow-up turn with a standalone current-policy-expiration question. If `policy_expire` is still missing, keep the second turn as the full review and submission request and carry an estimated value two months from today into that review.
 - When you render the review, keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections so the review does not run together, and list any remaining actions the same way.
-- Do not set `credit_check_authorized` to `true` until the real homeowner has reviewed the assembled application and explicitly answered yes to the soft-credit prompt.
+- Do not set `credit_check_authorized` to `true` from agent assumption or generic prior consent. It should be `true` only when the real homeowner has explicitly answered yes to Coverage Cat's soft-credit pull on the assembled application; if the operator already collected that exact consent separately, the first complete create call may include it.
 - If Coverage Cat is only missing `credit_check_authorized`, render a single review step: put the soft-credit explanation and consent prompt first, then show the current application summary or JSON below it.
 - If the user corrects anything during that review, patch the same `uid` first, then rerun the same one-time review step before resubmitting.
 - In sandbox mode, use fake or test contact details and never treat the returned offers or links as a real customer handoff.
@@ -181,8 +183,40 @@ Start with the fullest `intake` payload you can assemble from approved operator-
 - Include both applicant-level facts and property-level facts when available.
 - Prefer one large, accurate payload over many tiny incremental payloads.
 - Resend the latest known facts when your system has better data. Coverage Cat will merge them.
-- Omit `credit_check_authorized` or leave it `false` while you are still enriching from operator-side context. Only send `credit_check_authorized: true` after the real homeowner has reviewed the assembled application and explicitly authorized a soft credit pull that does not affect their credit score.
+- Omit `credit_check_authorized` or leave it `false` while you are still enriching from operator-side context. If the operator already collected the real homeowner's explicit authorization for Coverage Cat's soft credit pull on the assembled application, a complete first create call may include `credit_check_authorized: true`. Otherwise leave it omitted or `false` until that exact consent exists.
 - If the home has a mortgage and your CRM or loan file has any of them, send optional `intake.home[].loans[]` fields such as `lender_name`, `loan_number`, `mortgagee_clause`, and `loan_effective_date`. Coverage Cat accepts partial loan rows, so you may send only the fields you have.
+
+### Operator create-call minimums
+
+Coverage Cat hard-requires one thing on the first delegated create call: each `intake.home[]` row must already identify whether the property is standard homeowners, condo, or landlord coverage.
+
+- Standard homeowners: send both a non-rental `home_ownership` and a non-condo `property_type`.
+- Condo: send `property_type: condo`.
+- Landlord: send `home_ownership: owned_rental` or a rented `rental_status`.
+- If that discriminator is missing on the first create call, Coverage Cat rejects the request as `invalid_request` instead of guessing.
+
+### Required vs estimable
+
+Think about delegated homeowners fields in four buckets:
+
+- Hard-required on the first create call: the `intake.home[0]` product-selection row above.
+- Usually needed before final submit, but not always on the first create call: applicant identity/contact plus the property facts Coverage Cat returns in `missing_fields`. Common eventual base requirements include `home_sqft`, `home_ownership`, `new_purchase`, `address`, and `property_type`, with state- and property-specific follow-ups such as `siding_type`, `heating_type`, `rental_status`, `roof_type`, `roof_shape`, `build_date`, `purchase_date`, and `policy_expire`.
+- Allowed to be estimated: most reviewable `intake.home[]` values, as long as you send the actual value in `intake.home[]` and a matching `intake.home[].field_estimates[]` row. Coverage Cat may also return additional estimated home fields the same way.
+- Never estimate from operator context: dwelling replacement cost / Coverage A. Leave it blank unless you have a real Replacement Cost Estimator output. Likewise, do not send lender-only values such as `note_rate`, `term_months`, or escrow flags because Coverage Cat does not use them.
+- For a static field inventory, start with `GET /api/agent/openapi.yaml`. For a live intake's actual requiredness, treat the returned `schema` and `missing_fields[].enum` as authoritative.
+
+### What a more complete delegated submission often includes
+
+These are common examples of what "fullest intake you can assemble" usually means in practice. They are not a promise that every one of these fields is required on every first create call.
+
+- Applicant/core identity: `full_name`, `email`, `age` or `date_of_birth`, `marital_status`, `sms_consent`
+- Shared location: `intake.address` plus the same structured address on `intake.home[0].address`
+- Product classification: `home_ownership`, `property_type`, `new_purchase`, and if relevant `rental_status`
+- Core home facts: `home_sqft`, `purchase_date`, `build_date`, `roof_date`, `roof_type`, `roof_shape`, `siding_type`, `heating_type`
+- Occupancy/underwriting facts: `resident_count`, `bathroom_count`, `half_bathroom_count`, `construction_quality`, `continuously_insured`, `policy_expire`
+- Risk details that operators often already have: `has_fire_alarm`, `fire_alarm_type`, `has_burglar_alarm`, `has_attached_garage`, `has_fence`, `has_basement`, `central_air_conditioning`, `ever_heated_by_oil`, `has_circuit_breakers`, `swimming_pool`
+- Optional loan metadata when mortgaged: `intake.home[].loans[].lender_name`, `loan_number`, `mortgagee_clause`, `loan_effective_date`
+- Consent if already collected: `credit_check_authorized: true` only when the operator already has the homeowner's explicit yes to Coverage Cat's soft credit pull on this assembled application
 
 Example first call when your systems already carry a defensible but not yet user-confirmed home value:
 
@@ -229,6 +263,82 @@ Example first call when your systems already carry a defensible but not yet user
 ```
 
 Those `field_estimates` rows are what tell Coverage Cat to keep the value moving through delegated quoting while still requiring the homeowner to review or correct it before final bind in the portal.
+
+Example more complete first create call when the operator already has most underwriting facts plus the homeowner's explicit soft-credit consent for this assembled application:
+
+```json
+{
+  "intake": {
+    "full_name": "Taylor Home",
+    "email": "taylor.home@example.com",
+    "age": "1988-04-01",
+    "marital_status": "single",
+    "sms_consent": false,
+    "credit_check_authorized": true,
+    "address": {
+      "streetnumber": "4225",
+      "street": "Emory Ave",
+      "city": "West University Place",
+      "state": "TX",
+      "zip": "77005"
+    },
+    "home": [
+      {
+        "address": {
+          "streetnumber": "4225",
+          "street": "Emory Ave",
+          "city": "West University Place",
+          "state": "TX",
+          "zip": "77005"
+        },
+        "home_ownership": "owned_primary",
+        "property_type": "single_family",
+        "new_purchase": false,
+        "date_occupied": "2018-01-01",
+        "purchase_date": "2018-01-01",
+        "build_date": "1995-01-01",
+        "roof_date": "2015-01-01",
+        "roof_type": "architectural_shingle",
+        "roof_shape": "gable",
+        "siding_type": "wood_siding",
+        "heating_type": "gas_hot_air",
+        "rental_status": "not_rented",
+        "construction_quality": "basic",
+        "resident_count": "2",
+        "bathroom_count": "2",
+        "half_bathroom_count": "1",
+        "home_sqft": "1800",
+        "continuously_insured": 2,
+        "policy_expire": "2027-01-01",
+        "risk_mitigation": ["unsure"],
+        "misc_conditions": ["unsure"],
+        "has_fire_alarm": true,
+        "fire_alarm_type": "central",
+        "has_burglar_alarm": false,
+        "has_attached_garage": false,
+        "has_fence": false,
+        "has_basement": false,
+        "central_air_conditioning": true,
+        "ever_heated_by_oil": false,
+        "has_circuit_breakers": true,
+        "clients_enter_home": "no",
+        "swimming_pool": false,
+        "replacement_heating_system": "original",
+        "replacement_plumbing_system": "original",
+        "replacement_electrical": "original",
+        "loans": [
+          {
+            "mortgagee_clause": "ISAOA ATIMA",
+            "loan_effective_date": "2026-01-15"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+That kind of payload often goes straight to `pending_quotes` when the property/state-specific requirements are already satisfied. If not, Coverage Cat returns the remaining gaps in `missing_fields`.
 
 Example first sandbox rehearsal call:
 
@@ -317,6 +427,7 @@ Useful fields commonly needed for homeowners quoting include:
 - `credit_check_authorized`
 - `sms_consent`
 - `home`
+- On the initial create/prefill payload, `home[].home_ownership`, `home[].rental_status`, and `home[].property_type` must already distinguish landlord vs condo vs standard homeowners coverage. Coverage Cat rejects the first create call if the home row does not classify the line.
 
 ### Home ownership values
 
@@ -352,7 +463,7 @@ Coverage Cat still needs either more application data or the real homeowner's fi
 - Render a single review step: put that consent prompt first, then show the current application summary or JSON below it.
 - Do not interrupt that review turn just to ask current policy expiration on its own. If `policy_expire` is still missing, keep it in the review turn as an estimated value two months from today.
 - Keep the review visually separated into labeled applicant details, property details, estimated structure details, estimated systems details, and other items.
-- Do not set `credit_check_authorized` to `true` until the real homeowner personally says yes.
+- At this review checkpoint, do not set `credit_check_authorized` to `true` until the real homeowner personally says yes. A generic prior consent or agent-assumed answer is not enough.
 - If the homeowner corrects anything during review, patch the same `uid` first, then rerun the same one-time review step before asking for consent again.
 - After explicit yes, call `POST /api/agent/homeowners/quotes` again with the same `uid` and `intake.credit_check_authorized: true`.
 - Read `missing_fields`.
