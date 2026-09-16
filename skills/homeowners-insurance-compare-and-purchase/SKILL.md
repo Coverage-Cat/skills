@@ -43,7 +43,8 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
 
 ## Guardrails
 
-- On a cold start, ask only for the user's full name, email, and property address. Then search the user's own context, property records, Zillow, and Realtor.com before asking anything else.
+- On a cold start, ask only for the user's full name, email, property address, and whether the property should be treated as standard homeowners, condo, or landlord coverage. Then search the user's own context, property records, Zillow, and Realtor.com before asking anything else.
+- On the first delegated `POST /api/agent/homeowners/quotes` create call, each `intake.home[]` row must already classify the line: `property_type: condo` for condo coverage, `home_ownership: owned_rental` or a rented `rental_status` for landlord coverage, or both a non-rental `home_ownership` and a non-condo `property_type` for standard homeowners. Coverage Cat rejects the initial create call if that classifier is missing.
 - Before you call Coverage Cat, recover core shopper and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether the home is owner-occupied or a new purchase.
 - Do not open with a date-of-birth or marital-status questionnaire when the consumer-prefill handoff can already carry an estimated review card.
 - Do not break the second turn into a standalone current-policy-expiration question. Keep current-policy expiration in the review turn as an estimated value two months from today when needed.
@@ -56,5 +57,6 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
 - When the default consumer MCP is available, use the consumer-operated subset named above instead of switching to delegated homeowners tools without operator auth.
 - Reuse the same `uid` for the delegated session.
 - Use `sandbox: true` only on the first delegated create call when rehearsing.
-- Hold back `credit_check_authorized` until the real homeowner reviews the assembled application and explicitly says yes to the soft-credit prompt.
+- Treat `credit_check_authorized` as the real homeowner's explicit yes to Coverage Cat's soft-credit pull on the assembled application. If the operator already collected that exact consent separately, the first complete delegated create call may include it; otherwise hold it back until that yes exists.
+- For the field-by-field API contract, use `GET /api/agent/openapi.yaml`; for a live intake's actual required fields, trust the returned `schema` and `missing_fields[].enum`. Most reviewable `intake.home[]` values may be estimated with matching `field_estimates`, but never guess dwelling replacement cost and do not send lender-only `note_rate`, `term_months`, or escrow flags.
 - Expect `202 Accepted` / `pending_quotes` semantics for long-running delegated quote work and keep polling asynchronous.
