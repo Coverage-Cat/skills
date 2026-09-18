@@ -142,6 +142,28 @@ components:
         content:
           description: Base64-encoded file bytes.
           type: string
+        attachments:
+          description: Upload multiple declarations in one call when both files are already available.
+          items:
+            additionalProperties: false
+            properties:
+              content:
+                description: Base64-encoded file bytes.
+                type: string
+              filename:
+                type: string
+              type:
+                enum:
+                  - declarations
+                  - auto_declarations
+                type: string
+            required:
+              - type
+              - filename
+              - content
+            type: object
+          minItems: 1
+          type: array
         filename:
           type: string
         type:
@@ -149,11 +171,14 @@ components:
             - declarations
             - auto_declarations
           type: string
-      required:
-        - type
-        - filename
-        - content
       type: object
+      oneOf:
+        - required:
+            - type
+            - filename
+            - content
+        - required:
+            - attachments
     OfferSnapshot:
       properties:
         annual_price:
@@ -2988,7 +3013,7 @@ paths:
   /api/agent/umbrella/attach:
     post:
       description: |
-        Accepts a base64-encoded document (PDF or image) and attaches it to the intake as a declarations page. Use type "declarations" for a home/renters declarations page and "auto_declarations" for an auto declarations page. Call this only after the user has selected a Monoline or Markel offer and the delegated session is in bind or post-select checkout. Sandbox delegated umbrella sessions reject this endpoint with `sandbox_unsupported`.
+        Accepts a base64-encoded document (PDF or image) and attaches it to the intake as a declarations page. Use type "declarations" for a home/renters declarations page and "auto_declarations" for an auto declarations page. If both the home and auto declarations are already available, prefer one attach call with `attachments[]` so the shopper only has to approve one upload turn. Call this only after the user has selected a Monoline or Markel offer and the delegated session is in bind or post-select checkout. Sandbox delegated umbrella sessions reject this endpoint with `sandbox_unsupported`.
       operationId: attach_document_to_umbrella_session
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -3003,6 +3028,32 @@ paths:
                   description: Base64-encoded file content (PDF or image).
                   format: byte
                   type: string
+                attachments:
+                  description: Upload multiple declarations in one call when both files are already available.
+                  items:
+                    additionalProperties: false
+                    properties:
+                      content:
+                        description: Base64-encoded file content (PDF or image).
+                        format: byte
+                        type: string
+                      filename:
+                        description: Original filename including extension (e.g. "home_dec.pdf").
+                        type: string
+                      type:
+                        description: |
+                          "declarations" for a home or renters dec page; "auto_declarations" for an auto dec page.
+                        enum:
+                          - declarations
+                          - auto_declarations
+                        type: string
+                    required:
+                      - type
+                      - filename
+                      - content
+                    type: object
+                  minItems: 1
+                  type: array
                 filename:
                   description: Original filename including extension (e.g. "home_dec.pdf").
                   type: string
@@ -3019,12 +3070,16 @@ paths:
                   type: string
                 uid:
                   type: string
-              required:
-                - uid
-                - content
-                - filename
-                - type
               type: object
+              oneOf:
+                - required:
+                    - uid
+                    - content
+                    - filename
+                    - type
+                - required:
+                    - uid
+                    - attachments
         required: true
       responses:
         '200':
@@ -4258,7 +4313,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}/attach:
     post:
-      description: 'Use this only after the consumer umbrella follow-up reports `documents_needed`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Coverage Cat accepts base64-encoded PDF or image uploads and reuses the same attachment validation and OCR flow as the delegated umbrella checkout.'
+      description: 'Use this only after the consumer umbrella follow-up reports `documents_needed`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Coverage Cat accepts base64-encoded PDF or image uploads and reuses the same attachment validation and OCR flow as the delegated umbrella checkout. If both the home and auto declarations are already available, prefer one attach call with `attachments[]` so the shopper only approves one upload turn.'
       operationId: attach_consumer_umbrella_document
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
