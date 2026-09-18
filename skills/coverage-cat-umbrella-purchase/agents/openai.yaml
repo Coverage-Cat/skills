@@ -32,7 +32,8 @@ interface:
     shopper-owned details in plain English, and keep already reviewed estimated
     facts in the review section for corrections instead of asking the user to
     re-key them. For Monoline and Markel, keep declarations uploads in the
-    post-choose flow, then poll until `payment_needed` and share the returned
-    `payment_url`, which usually appears within about 5-10 minutes once those
-    uploads are on file. Only use the delegated flow when a real operator key
-    is already present.
+    post-choose flow, prefer one attach call when both the home and auto
+    declarations are already available, then poll until `payment_needed` and
+    share the returned `payment_url`, which usually appears within about 5-10
+    minutes once those uploads are on file. Only use the delegated flow when a
+    real operator key is already present.
