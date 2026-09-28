@@ -21,8 +21,8 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
 2. Stay on that consumer-operated subset through the one-time review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal, so do not switch to delegated tools just because the shopper is unauthenticated. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
 3. Use the delegated operator MCP or delegated homeowners API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
-4. `GET /api/agent` lists the umbrella and homeowners operation maps, including the delegated homeowners fix-issues email endpoint and the direct-intake follow-up URL templates.
-5. `GET /api/agent/openapi.yaml` is the authoritative request/response schema for the published homeowners and consumer handoff endpoints.
+4. `GET /api/consumer` is the authoritative shopper-agent discovery document for personal consumer homeowners runs. It lists the consumer-prefill and direct-intake follow-up URL templates and makes clear that these flows do not require a Coverage Cat operator API key.
+5. `GET /api/consumer/openapi.yaml` is the authoritative request/response schema for the shopper-agent homeowners handoff endpoints. Use `/api/agent` and `/api/agent/openapi.yaml` only when you intentionally need delegated operator endpoints or read-only tool APIs.
 6. The direct-homeowner follow-up API lives under `/api/intake/:uid/...` and uses the short-lived `intake_access_token` returned by consumer prefill.
 
 ## API Contract Quick Reference
@@ -97,6 +97,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - Path 1 starts unauthenticated at `POST /api/consumer/homeowners/prefill`, then reuses the returned `intake_access_token` as `Authorization: Bearer <intake_access_token>` on `/api/intake/:uid/...`.
 - Path 2 uses a real Coverage Cat operator API key that must be issued ahead of time.
 - Send that operator key as `Authorization: Bearer <key>`.
+- Do not ask a personal shopper for a Coverage Cat operator API key or delegated OAuth just to run Path 1. Stay on the consumer MCP or the shopper-safe REST surface for consumer-prefill and direct follow-up.
 - Do not call Coverage Cat's OTP/key-issuance endpoints from inside the agent for the delegated homeowners flow.
 - Shared environment keys are not accepted for the homeowners purchase endpoint.
 - Repeated invalid bearer-key attempts may return `429 too_many_attempts`. Honor the `Retry-After` header before retrying.
