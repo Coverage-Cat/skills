@@ -74,6 +74,7 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 2. On a cold start, do not open with a questionnaire. Call `POST /api/consumer/umbrella/prefill` first with `credit_consent_pending: true` and the fullest `intake` or estimate you can assemble. On the very first consumer-prefill handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
    Use canonical consumer umbrella keys such as `full_name`, `email`, `phone_number`, `birthday`, `marital_status`, `license_state`, `license_number`, `occupation`, `line_of_work`, `spouse_full_name`, `spouse_birthday`, `spouse_license_state`, `spouse_license_number`, `address.{street,city,state,zip}`, `approximate_asset_value` or `net_worth_numeric`, `desired_coverage_limit`, `required_coverage_e_limit`, `vehicle_count` or `umbrella_details.motorized_vehicle_count`, `motorcycles`, `antique_vehicles`, `jet_skis`, `large_watercraft`, `property_count`, `non_us_property_count`, `current_auto_coverages`, `professional_entertainer_or_public_figure`, `household_open_claim`, `liability_loss_in_last_5_years`, `liability_loss_over_50k`, `four_or_more_losses_over_25k`, `reckless_driving_conviction`, and `felony`.
    Avoid non-canonical consumer keys such as `street`, `city`, `state`, `zip`, `drivers_license_state`, `drivers_license_number`, `net_worth`, or `desired_umbrella_liability_limit`.
+   `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for Unsure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation.
    Do not send `vehicles` rows before submission. Use `vehicle_count` or `umbrella_details.motorized_vehicle_count` for the household vehicle count; actual vehicle details are collected later only if the selected offer requires them, such as a Markel bind follow-up.
 
    Example initial consumer-prefill payload:
@@ -109,7 +110,7 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
        "large_watercraft": 0,
        "property_count": 1,
        "non_us_property_count": 0,
-       "current_auto_coverages": "unsure",
+       "current_auto_coverages": "500k/500k",
        "professional_entertainer_or_public_figure": false,
        "household_open_claim": false,
        "liability_loss_in_last_5_years": false,
