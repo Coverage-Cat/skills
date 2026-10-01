@@ -20,8 +20,8 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
    Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-2. Fetch `GET /api/agent`.
-3. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
+2. Fetch `GET /api/consumer`.
+3. Fetch `GET /api/consumer/openapi.yaml` or `GET /api/consumer/openapi.json`.
 4. Read `GET /api/agent/homeowners/skill.md`.
 5. Read `/ai/skills/homeowners/setup` if you need the delegated operator path.
 
@@ -30,9 +30,10 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
 1. Use the consumer-prefill path when there is no operator key or the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
 2. On the default consumer MCP, stay on that same consumer-operated subset through review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal rather than the delegated MCP tools. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
 3. Use the delegated operator MCP or delegated homeowners API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
-3. Use the delegated operator path only when you have a real Coverage Cat operator bearer key and approved back-office context to prefill the application.
-4. If your runtime cannot prefill, fall back to the direct browser handoff at `/intake`.
-5. Do not mix the consumer-prefill and delegated paths in one session.
+4. Do not ask a personal shopper for a Coverage Cat operator API key or delegated OAuth just to run the consumer-prefill path.
+5. Use the delegated operator path only when you have a real Coverage Cat operator bearer key and approved back-office context to prefill the application.
+6. If your runtime cannot prefill, fall back to the direct browser handoff at `/intake`.
+7. Do not mix the consumer-prefill and delegated paths in one session.
 
 ## Delegated Homeowners Loop
 

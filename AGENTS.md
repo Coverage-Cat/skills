@@ -7,8 +7,10 @@ Start here:
 - Public agents.txt: `https://www.coveragecat.com/agents.txt`
 - Well-known agents.txt: `https://www.coveragecat.com/.well-known/agents.txt`
 - Developer portal: `https://www.coveragecat.com/developers`
-- Discovery JSON: `https://www.coveragecat.com/api/agent`
-- OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
+- Consumer discovery JSON: `https://www.coveragecat.com/api/consumer`
+- Consumer OpenAPI: `https://www.coveragecat.com/api/consumer/openapi.yaml`
+- Delegated/tools discovery JSON: `https://www.coveragecat.com/api/agent`
+- Delegated/tools OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
 - Recommended MCP registration URL for ChatGPT and most hosts: `https://www.coveragecat.com/.well-known/mcp.json`
 - Skills hub: `https://www.coveragecat.com/ai/skills`
 - Skills directory: `./skills`
@@ -35,9 +37,10 @@ Guardrails:
   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-- For consumer-operated agents on that default consumer MCP, stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach` for umbrella post-quote follow-up.
-- The umbrella consumer subset can stay on the no-operator path through quote review, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated umbrella tools just to reach checkout.
+- For consumer-operated agents on that default consumer MCP, stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment` for umbrella post-quote follow-up.
+- The umbrella consumer subset can stay on the no-operator path through quote review, declarations upload, `payment_needed`, optional agentic payment collection, and `payment_url` fallback; do not switch to delegated umbrella tools just to reach checkout.
 - Homeowners consumer agents should stay on the no-operator subset through review and quote follow-up, then let Coverage Cat's consumer portal finish final bind.
+- Use `https://www.coveragecat.com/api/consumer` and `https://www.coveragecat.com/api/consumer/openapi.yaml` for personal shopper flows. Use `/api/agent` and `/api/agent/openapi.yaml` only when delegated operator auth or read-only tool APIs are intentionally in scope.
 - `GET` on `https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected; direct MCP transport uses `POST` JSON-RPC. Do not use `/.well-known/mcp.json` as the direct transport URL.
 - If a local Codex OAuth flow for `https://www.coveragecat.com/api/agent/mcp` fails because the host rejects the local callback URL, keep shopper flows on the consumer MCP and use the delegated operator MCP only from a bearer-token setup or an OAuth host whose callback policy is already compatible.
 - If the user says "shop for umbrella with Coverage Cat" or otherwise wants Coverage Cat to buy or quote umbrella insurance for them, start the umbrella purchase skill instead of `insurance-tools`.
@@ -46,5 +49,6 @@ Guardrails:
 - Do not mix consumer-prefill and delegated loops in one session.
 - Do not invent Coverage Cat endpoints or flow steps; start with the published discovery JSON and OpenAPI.
 - Do not use customer emails for operator-key issuance.
+- Do not ask a personal shopper for a Coverage Cat operator API key or delegated OAuth just to run consumer-prefill or direct follow-up.
 - Do not include customer credentials, bearer tokens, OTP codes, or private back-office URLs in repo changes.
 - Do not copy internal Coverage Cat-only skills or eval tooling into this public repo.

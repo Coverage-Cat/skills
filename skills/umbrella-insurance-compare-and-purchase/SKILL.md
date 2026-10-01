@@ -15,24 +15,25 @@ Choose this skill, not the umbrella calculator or `insurance-tools`, for request
 
 Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.com/.well-known/agents.txt`; those files route agents to Coverage Cat's MCP, REST, markdown, and browser-fallback resources. Do not drive the browser UI unless Coverage Cat should take over the shopper-facing flow.
 
-1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated umbrella runs to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, and `umbrella_consumer_attach`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated umbrella runs to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
    Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-2. Fetch `GET /api/agent`.
-3. Fetch `GET /api/agent/openapi.yaml` or `GET /openapi.json`.
+2. Fetch `GET /api/consumer`.
+3. Fetch `GET /api/consumer/openapi.yaml` or `GET /api/consumer/openapi.json`.
 4. Read `GET /api/agent/skill.md`.
 
 ## Choose The Path
 
 1. Use the consumer-prefill path when there is no operator key or when the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
-2. On the default consumer MCP, keep consumer-operated umbrella runs on that same subset through quote review, declarations upload, `payment_needed`, and `payment_url`; do not switch to delegated tools just to reach checkout. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
+2. On the default consumer MCP, keep consumer-operated umbrella runs on that same subset through quote review, declarations upload, `payment_needed`, optional agentic payment collection, and `payment_url` fallback; do not switch to delegated tools just to reach checkout. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
 3. Use the delegated operator MCP or delegated umbrella API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
-3. Use the delegated operator path only when you already have a real Coverage Cat operator bearer key and approved back-office context.
-4. Do not mix the consumer-prefill and delegated paths in one session.
+4. Do not ask a personal shopper for a Coverage Cat operator API key or delegated OAuth just to run the consumer-prefill path.
+5. Use the delegated operator path only when you already have a real Coverage Cat operator bearer key and approved back-office context.
+6. Do not mix the consumer-prefill and delegated paths in one session.
 
 ## Delegated Umbrella Loop
 
@@ -51,6 +52,7 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
 - `POST /api/intake/:uid/select`
 - `POST /api/intake/:uid/bind`
 - `POST /api/intake/:uid/attach`
+- `POST /api/intake/:uid/payment`
 
 ## Guardrails
 
@@ -71,11 +73,11 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
 - Start with the fullest intake and any matching `field_estimates`.
 - If delegated `draft` reuses or conflicts on a recent buyer-email session, switch to the returned `uid` and continue that existing application instead of retrying create.
 - Do not ask for user credit consent on pre-submit review turns. Once the shopper is actively choosing an offer, you may collect the real user's `Yes` in that same reply so `select` can proceed without a second consent-only turn.
-- After submission or delegated `quotes`, if Coverage Cat returns `pending_quotes`, keep polling and do not present a partial umbrella quote set yet; Coverage Cat publishes the full current set together once the carrier checks settle.
-- When Coverage Cat returns multiple offers, do not collapse them to only the recommended default or a shortlist if alternatives are present. Render every returned offer as a single markdown table with columns `Carrier | Coverage limit | Annual price | Min. auto limits | Notes` (one row per offer, recommended first, `(Recommended)` in the Notes column of the recommended row). When an offer includes `sample_policy_url`, paste it directly into that row's Notes column as a markdown link such as `[Sample policy](...)`. Format prices as `$941/yr` and coverage limits as `$2M` / `$3M`. Do not restate offer prices or coverage limits in the surrounding prose.
+- When Coverage Cat returns multiple offers, do not collapse them to only the recommended default if alternatives are present. Render offers as a single markdown table with columns `Carrier | Coverage limit | Annual price | Min. auto limits | Notes` (one row per offer, recommended first, `(Recommended)` in the Notes column of the recommended row). When an offer includes `sample_policy_url`, paste it directly into that row's Notes column as a markdown link such as `[Sample policy](...)`. Format prices as `$941/yr` and coverage limits as `$2M` / `$3M`. Do not restate offer prices or coverage limits in the surrounding prose.
 - Below the offers table, always render a `**Next steps to purchase:**` bulleted checklist of shopper action items only. Let the shopper answer it in one reply with the offer choice, any Min. auto limits confirmation, and `Yes` for the soft credit check when they are ready to buy. If Monoline or Markel appears, keep declarations upload as the checklist action and move the 5-10 minute checkout expectation into a separate note. Never bury these steps in a prose paragraph.
+- If `selection_guidance.same_reply_requirements` lists an offer, add a short conditional checklist bullet so the shopper can answer those listed items in the same selection reply instead of waiting for a later bind-only turn.
 - If `select` returns `credit_consent_required` with `next_question`, ask for the consent and every listed bind detail in the same shopper-facing turn, then retry `select` once with both the user's `Yes` and those answers.
-- Keep payment and carrier-managed signing in the browser. When Coverage Cat returns `payment_needed`, share `payment_url` instead of collecting payment details in chat.
+- When Coverage Cat returns `payment_needed`, use `POST /api/intake/:uid/payment` when your runtime can securely collect payment details. If it cannot, share `payment_url` and keep payment or carrier-managed signing in the browser.
 - For Monoline and Markel, keep required home and auto declarations in the post-choose flow. If both files are already available, prefer one attach call with `attachments[]`. Once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with `payment_url` within about 5-10 minutes while declarations verification continues in parallel.
 - If you are rehearsing, set `sandbox: true` only on the first create call for that `uid`.
 - Keep read-only calculator and finder jobs on the separate insurance-tools skill rather than opening a delegated umbrella session.
