@@ -41,6 +41,7 @@ Start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.
 - `GET /api/agent/homeowners/dashboard`
 - `POST /api/agent/homeowners/dashboard/session`
 - `POST /api/agent/homeowners/fix-issues-email`
+- For browser access, open `operator_dashboard_url` from a delegated homeowners response when you want the operator view for one intake, or call `POST /api/agent/homeowners/dashboard/session` and open the returned `dashboard_url`. The `GET /api/agent/homeowners/dashboard` endpoint is the JSON status API.
 
 ## Guardrails
 

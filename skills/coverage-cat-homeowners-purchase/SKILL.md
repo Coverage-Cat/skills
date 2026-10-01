@@ -88,7 +88,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 2. Reuse one `uid` through the whole lifecycle, and keep filling `missing_fields` from your own systems first. The target is 2-3 turns total including the final homeowner consent-submit turn, not a questionnaire.
 3. If you are rehearsing the flow, set top-level `sandbox: true` on the very first create call only. That `uid` stays sandbox-scoped, the first fully complete submit with explicit credit consent returns `pending_quotes`, and a later poll returns mocked offers without live customer email or carrier traffic.
 4. Treat `credit_check_authorized` as the real homeowner's explicit yes to Coverage Cat's soft-credit pull on the assembled application. If the operator already collected that exact consent separately, the first complete create call may include `credit_check_authorized: true`. Otherwise leave it omitted or `false` until that yes exists. If you still see non-credit missing fields, keep enriching from approved context instead of bouncing them back to the homeowner.
-5. After the first fully complete submit with explicit credit consent, expect `pending_quotes`, then poll the same `uid` or use the operator dashboard APIs.
+5. After the first fully complete submit with explicit credit consent, expect `pending_quotes`, then poll the same `uid` or use the operator dashboard APIs. For browser access, either open the response `operator_dashboard_url` for that same intake or call `POST /api/agent/homeowners/dashboard/session` with the operator bearer key to mint a broader short-lived `dashboard_url`.
 6. If the delegated intake still needs fixes, use `homeowner_fix_issues_request_login_url` or `POST /api/agent/homeowners/fix-issues-email` to hand the homeowner back to Coverage Cat's GUI without exposing a direct session URL.
 7. When offers are ready, summarize them and hand the homeowner to Coverage Cat with the safe sign-in request link for final selection and bind.
 
@@ -490,7 +490,7 @@ Coverage Cat has a complete submitted homeowners intake and is waiting for quote
 - `homeowner_quotes_request_login_url` is the safer homeowner handoff link. It lands on Coverage Cat's email-first sign-in page for the offers view, so it does not hand over a direct session link. Default to sharing it at `quoted`. If you want to pre-stage sign-in, you may share it during `pending_quotes`.
 - `homeowner_portal_url` is the direct Coverage Cat consumer portal session link for this intake. Treat it as sensitive session data rather than the default handoff URL.
 - `offers_page_url` is the same portal link, kept for backwards compatibility.
-- `operator_dashboard_url` is a short-lived browser login link for the operator-side homeowners dashboard, already filtered to this `uid`.
+- `operator_dashboard_url` is a short-lived browser login link for the operator-side homeowners dashboard, already filtered to this `uid`. Open that URL directly when a human operator needs the browser view for this one intake.
 - If you need a status board for many outstanding delegated homeowners requests, use `GET /api/agent/homeowners/dashboard` or mint a fresh browser session with `POST /api/agent/homeowners/dashboard/session`.
 - If the response includes `sandbox: true`, the next poll returns mocked offers. No live quote jobs or customer emails were started.
 
@@ -570,7 +570,7 @@ Each row is keyed by `property_id` and includes a coarse status, `offers_publish
 
 Do not expect this dashboard surface to diagnose exact missing fields or show exact offer counts. For missing-data details, use the live `missing_fields` returned by the delegated quote response for that `uid`, or the direct-homeowner issues endpoint when you are operating in the first-party direct flow.
 
-If you need a browser session instead of raw JSON, call `POST /api/agent/homeowners/dashboard/session` with the same optional filters (`uid`, `property_id`, `status`, `limit`). Coverage Cat returns a short-lived `dashboard_url` that signs the operator into the browser dashboard without exposing the bearer key in the URL.
+If you need a browser session instead of raw JSON, call `POST /api/agent/homeowners/dashboard/session` with the same optional filters (`uid`, `property_id`, `status`, `limit`). Coverage Cat returns a short-lived `dashboard_url` that signs the operator into the browser dashboard without exposing the bearer key in the URL. Open that returned `dashboard_url` in the browser; `GET /api/agent/homeowners/dashboard` itself is the machine-readable status API, not the browser login handoff.
 
 When a row includes `homeowner_quotes_request_login_url`, you may pass that link to the homeowner. It sends them to Coverage Cat's email-first sign-in page for the offers view, so it does not log the operator or agent into the homeowner's private offers page.
 
