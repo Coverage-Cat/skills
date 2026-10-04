@@ -3,9 +3,14 @@ interface:
   short_description: "Run Coverage Cat's consumer-prefill or delegated umbrella flow"
   default_prompt: >-
     Use $coverage-cat-umbrella-purchase to operate Coverage Cat's umbrella
-    purchase workflow. Start with https://www.coveragecat.com/agents.txt or
+    purchase workflow. Start with https://www.coveragecat.com/AGENTS.md,
+    https://www.coveragecat.com/agents.txt, or
     https://www.coveragecat.com/.well-known/agents.txt, and do not drive the
     browser UI unless Coverage Cat should take over the shopper-facing flow.
+    Keep the shopper on the machine-readable MCP or REST loop until Coverage
+    Cat returns `resume_url` or you intentionally hand the browser over to
+    Coverage Cat. `/umbrella` or `/intake` are fallback browser starts, not
+    the preferred purchase entrypoints.
     Default to the consumer-prefill handoff when no operator bearer key is
     available in runtime. If the runtime supports MCP, register
     `https://www.coveragecat.com/.well-known/mcp.json` in ChatGPT or use

@@ -4,6 +4,7 @@ This repository is the public source for Coverage Cat's installable agent skills
 
 Start here:
 
+- Public AGENTS.md: `https://www.coveragecat.com/AGENTS.md`
 - Public agents.txt: `https://www.coveragecat.com/agents.txt`
 - Well-known agents.txt: `https://www.coveragecat.com/.well-known/agents.txt`
 - Developer portal: `https://www.coveragecat.com/developers`
@@ -29,7 +30,7 @@ Legacy compatibility names remain available for existing installs:
 
 Guardrails:
 
-- Agents landing on `coveragecat.com` should start with `https://www.coveragecat.com/agents.txt` or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
+- Agents landing on `coveragecat.com` should start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
 - Register the default consumer MCP at `/.well-known/mcp.json` when you want live quoting or comparison in ChatGPT or another manifest-aware MCP host. For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`. That same consumer connector already exposes `docs_list_topics`, `docs_search`, and `docs_get_resource`, so Coverage Cat setup stays on one MCP connection.
 - If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
   Ask the question on its own line exactly as:
@@ -46,6 +47,7 @@ Guardrails:
 - If the user says "shop for umbrella with Coverage Cat" or otherwise wants Coverage Cat to buy or quote umbrella insurance for them, start the umbrella purchase skill instead of `insurance-tools`.
 - Pick the consumer-prefill path first when no operator bearer key is available.
 - On the consumer-prefill path, keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data over the freshest rotated `intake_access_token`.
+- Keep the shopper on the MCP or REST loop until Coverage Cat returns `resume_url` or you intentionally hand the browser over to Coverage Cat. `/umbrella` or `/intake` are fallback browser starts, not the preferred purchase entrypoint.
 - Do not mix consumer-prefill and delegated loops in one session.
 - Do not invent Coverage Cat endpoints or flow steps; start with the published discovery JSON and OpenAPI.
 - Do not use customer emails for operator-key issuance.
