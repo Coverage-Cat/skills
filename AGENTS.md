@@ -39,7 +39,7 @@ Guardrails:
 
   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
 - For consumer-operated agents on that default consumer MCP, stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment` for umbrella post-quote follow-up.
-- The umbrella consumer subset can stay on the no-operator path through quote review, declarations upload, `payment_needed`, optional agentic payment collection, and `payment_url` fallback; do not switch to delegated umbrella tools just to reach checkout.
+- The umbrella consumer subset can stay on the no-operator path through quote review, declarations upload, `payment_needed`, secure payment UI when available, and `payment_url` fallback; do not switch to delegated umbrella tools just to reach checkout.
 - Homeowners consumer agents should stay on the no-operator subset through review and quote follow-up, then let Coverage Cat's consumer portal finish final bind.
 - Use `https://www.coveragecat.com/api/consumer` and `https://www.coveragecat.com/api/consumer/openapi.yaml` for personal shopper flows. Use `/api/agent` and `/api/agent/openapi.yaml` only when delegated operator auth or read-only tool APIs are intentionally in scope.
 - `GET` on `https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected; direct MCP transport uses `POST` JSON-RPC. Do not use `/.well-known/mcp.json` as the direct transport URL.
