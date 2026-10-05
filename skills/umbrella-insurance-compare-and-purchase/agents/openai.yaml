@@ -19,10 +19,11 @@ interface:
     transport, do not use the manifest as the direct transport URL, and stay on
     the default consumer MCP subset: `umbrella_consumer_prefill`,
     `consumer_intake_issues`, `consumer_intake_patch`,
-    `umbrella_consumer_select`, `umbrella_consumer_bind`, and
-    `umbrella_consumer_attach`. That subset stays valid through
-    `payment_needed` and `payment_url`, so do not switch to delegated tools
-    just to reach checkout. On consumer umbrella prefills and pre-submit
+    `umbrella_consumer_select`, `umbrella_consumer_bind`,
+    `umbrella_consumer_attach`, and `umbrella_consumer_payment`. That subset
+    stays valid through `payment_needed`, secure payment UI when available,
+    and `payment_url`, so do not switch to delegated tools just to reach
+    checkout. On consumer umbrella prefills and pre-submit
     patches, prefer canonical keys such as `address.street`, `address.city`,
     `address.state`, `address.zip`, `license_state`, `license_number`,
     `net_worth_numeric`, `required_coverage_e_limit`, and `vehicle_count` or
@@ -37,9 +38,13 @@ interface:
     prefixing lines with `[Estimated]`, ask only for any explicitly missing
     shopper-owned details in plain English, and keep already reviewed estimated
     facts in the review section for corrections instead of asking the user to
-    re-key them. For Monoline and Markel, keep declarations uploads in the
-    post-choose flow, prefer one attach call when both the home and auto
-    declarations are already available, then poll until `payment_needed` and
-    share the returned `payment_url`, which usually appears within about 5-10
-    minutes once those uploads are on file. Only use the delegated flow when a
-    real operator key is already present.
+    re-key them. If an offer includes `um_uim_selection`, let the shopper
+    include or decline that $1M excess UM/UIM option in the same selection
+    reply and send it as `um_uim_election` on the first select call. For
+    Monoline and Markel, keep declarations uploads in the post-choose flow,
+    prefer one attach call when both the home and auto declarations are
+    already available, then poll until `payment_needed`. When payment is
+    ready, call `/payment` with `payment_collection_requested: true`; if the
+    secure UI renders, use it and do not ask for card details in chat,
+    otherwise share the returned `payment_url` with the fallback reason. Only
+    use the delegated flow when a real operator key is already present.
