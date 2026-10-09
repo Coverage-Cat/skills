@@ -13,14 +13,14 @@ Read the discovery and schema surfaces before you start guessing endpoint names 
 Start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`; those files route agents to Coverage Cat's MCP, REST, markdown, and browser-fallback resources. Do not drive the browser UI unless Coverage Cat should take over the shopper-facing flow.
 Keep the shopper on the machine-readable MCP or REST loop until Coverage Cat returns `resume_url` or you intentionally hand the browser over to Coverage Cat. `/intake` and Coverage Cat's consumer portal are fallback browser starts, not the preferred purchase entrypoints.
 
-1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `homeowners_consumer_select`, `homeowners_consumer_bind`, `homeowners_consumer_policy`, and `homeowners_consumer_service`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
    Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-2. Stay on that consumer-operated subset through the one-time review and quote follow-up. Final homeowners bind still happens in Coverage Cat's consumer portal, so do not switch to delegated tools just because the shopper is unauthenticated. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
+2. Stay on that consumer-operated subset through the one-time review, long-lag quote polling, homeowners offer selection, bind follow-up, and later policy/support follow-up. Homeowners quotes or carrier bind follow-up may take up to 48 hours, so keep polling and keep the registered customer email channel on file. When Coverage Cat surfaces messy carrier or shopper follow-up under `conversation.messages` with `conversation.reply_pending`, answer it in the same loop with `consumer_intake_patch` / `PATCH /api/intake/:uid` and `message_reply`. Coverage Cat does not collect first-party homeowners payment in chat; any carrier payment or signing link must be sent directly to the customer's email on file. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
 3. Use the delegated operator MCP or delegated homeowners API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
 4. `GET /api/consumer` is the authoritative shopper-agent discovery document for personal consumer homeowners runs. It lists the consumer-prefill and direct-intake follow-up URL templates and makes clear that these flows do not require a Coverage Cat operator API key.
 5. `GET /api/consumer/openapi.yaml` is the authoritative request/response schema for the shopper-agent homeowners handoff endpoints. Use `/api/agent` and `/api/agent/openapi.yaml` only when you intentionally need delegated operator endpoints or read-only tool APIs.
@@ -42,7 +42,7 @@ That first `home[0]` row must already distinguish the product type: use `propert
 
 Sandbox and errors: the consumer-prefill handoff does not use a separate sandbox flag, while the delegated operator path uses top-level `sandbox: true` only on the first create call for a rehearsal `uid`. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
 
-Payment progression: delegated homeowners quoting does not expose a separate payment API step today. Once offers are ready, Coverage Cat hands the homeowner to its secure portal for final selection, confirmation of estimated answers, payment, and bind.
+Payment progression: delegated homeowners quoting does not expose a separate payment API step today. On the consumer-operated path, Coverage Cat can keep offer selection and bind orchestration in chat, but there is still no first-party homeowners payment step. Any carrier payment or signing link must be sent directly to the customer's email on file.
 
 ## Choose the Path
 
@@ -50,7 +50,7 @@ This skill supports two different jobs. Pick one path first, because the consume
 
 1. Use the consumer-prefill path when the homeowner's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
 2. When your runtime is on the default consumer MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `homeowners_consumer_prefill`, `consumer_intake_issues`, and `consumer_intake_patch`.
-3. Path 1 stays on that consumer-operated subset through review and quote follow-up, then hands final bind back to Coverage Cat's consumer portal.
+3. Path 1 stays on that consumer-operated subset through review, long-lag quote polling, `homeowners_consumer_select`, `homeowners_consumer_bind`, and later policy/support follow-up.
 4. Use the operator-partner path only when you have a real Coverage Cat operator key and approved back-office context you can use to prefill the application.
 5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated API and dashboard.
 
@@ -80,8 +80,11 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 4. Use `PATCH /api/intake/:uid` with that same bearer token to write user-confirmed answers, or to write estimated homeowners values plus matching `field_estimates` rows when your own context can defensibly fill them.
 5. Keep the human out of the loop until `resource.status` becomes `ready_for_review`. At that point, render one review step or hand the user to `resource.fix_issues_request_login_url` so Coverage Cat's GUI can handle the same review. When you show that review, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. Keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 6. On that one review turn, collect any corrections plus the real homeowner's soft-credit consent, then send one final `PATCH /api/intake/:uid` with `confirm_submission: true`. Ask for any remaining items in plain English, not field names, and list them as short bullets rather than in a paragraph. For most successful consumer-prefill handoffs, that last patch only needs `credit_check_authorized: true`.
-7. After submit, keep polling `GET /api/intake/:uid/issues` with the same bearer token until Coverage Cat returns structured homeowners quote review data or the user needs the browser handoff.
-8. The intended direct-assistant UX is that the only user interruption is that one-time review of estimated answers. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
+7. After submit, keep polling `GET /api/intake/:uid/issues` with the same bearer token until Coverage Cat returns structured homeowners quote review data. Quotes or carrier bind follow-up may take up to 48 hours, so keep polling and keep the registered customer email channel on file for notifications.
+8. If `GET /api/intake/:uid/issues` returns `conversation.messages` and `conversation.reply_pending: true`, read the recent thread, answer the insurer or shopper in the same flow, and send that answer with `PATCH /api/intake/:uid` using `message_reply` plus the returned `reply_to_message_id` when Coverage Cat includes one.
+9. Once Coverage Cat returns homeowners offers, summarize them, call `POST /api/intake/:uid/select` with the chosen `selection_token`, then read back the returned `purchase_preview` and call `POST /api/intake/:uid/bind` only after the shopper gives final approval.
+10. After Coverage Cat reports a policy on file, use `GET /api/intake/:uid/policy` and `POST /api/intake/:uid/service` for retrieval, cancellation/refund previews, or support follow-up.
+11. The intended direct-assistant UX is that the only user interruption before quotes is that one-time review of estimated answers, followed by chat-native carrier follow-up when needed. If you do not have this API access, fall back to the consumer-prefill handoff or the plain browser handoff at `/intake`.
 
 ### Path 2: Operator-partner delegated flow
 
@@ -114,7 +117,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 7. On every pre-submit user-facing turn, explicitly say the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 8. Treat `credit_check_authorized` as the real homeowner's explicit authorization for Coverage Cat's soft credit pull on the assembled application. If the operator already collected that exact consent separately, you may send `true` on the first complete create call; otherwise withhold it until that yes exists.
 9. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
-10. Once offers are ready, summarize them clearly and hand the homeowner to Coverage Cat's secure portal for final selection, estimated-field confirmation, and bind.
+10. On the consumer-operated path, once offers are ready, summarize them clearly, use `homeowners_consumer_select`/`POST /api/intake/:uid/select`, then confirm the returned preview and use `homeowners_consumer_bind`/`POST /api/intake/:uid/bind`. If `consumer_intake_issues` later returns `conversation.reply_pending`, keep the messy carrier follow-up in the same chat loop with `consumer_intake_patch` and `message_reply`. Coverage Cat still cannot collect first-party homeowners payment in chat, so any carrier payment or signing link must go directly to the customer's email on file.
 11. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
 
 ## Conversation Rules
@@ -514,12 +517,12 @@ Each row on `known_summary.homes[].field_estimates` reflects an estimated home v
 
 Rules for handling estimates:
 
-- Estimates can keep quoting moving, but homeowners finalization still happens in Coverage Cat's normal consumer portal. Before the policy is finalized there, Coverage Cat will route the customer back through home fix-issues/review to confirm or correct any unconfirmed estimated home fields.
-- If you are sending a defensible but not yet user-confirmed home value, include the actual field value in `intake.home[]` and add a matching `field_estimates` row on that same home. Those rows are what make Coverage Cat treat the value as estimated and send it back through portal review before final bind.
+- Estimates can keep quoting moving, but unconfirmed homeowners estimates still have to pass through a human review step before final bind approval.
+- If you are sending a defensible but not yet user-confirmed home value, include the actual field value in `intake.home[]` and add a matching `field_estimates` row on that same home. Those rows are what make Coverage Cat treat the value as estimated and send it back through the final review step before bind.
 - If the operator's system carries a real (user-confirmed) value for a field Coverage Cat estimated, resend that value in the next `POST /api/agent/homeowners/quotes` payload. Coverage Cat will overwrite the estimate with the confirmed answer.
-- `confirmed_by_user` flips once a human resubmits the same answer back through Coverage Cat, whether that happens from the operator payload or the homeowner reviewing the pre-filled value in the portal.
+- `confirmed_by_user` flips once a human resubmits the same answer back through Coverage Cat, whether that happens from the operator payload or the homeowner reviewing the pre-filled value in the direct review flow or browser fallback.
 - Common `source` values you may see or send today include operator-side labels such as `crm`, `email_thread`, `policy_declarations`, and `prior_coverage_cat_session`, plus Coverage Cat-generated labels such as `loan_file`, `zillow`, `realtor`, `vintage_rule`, and `zdr_openai`. Treat unknown values as opaque.
-- `confidence` is `low | medium | high` and reflects Coverage Cat's internal certainty, not carrier acceptance risk. Prioritize confirming `low` confidence estimates with the customer before they finalize in the portal.
+- `confidence` is `low | medium | high` and reflects Coverage Cat's internal certainty, not carrier acceptance risk. Prioritize confirming `low` confidence estimates with the customer before they approve final bind.
 
 Coverage Cat may estimate any reviewable `intake.home[]` field it can defensibly infer from the property probe, the current intake payload, and the ZDR-backed estimator pass. In practice, the delegated flow can pre-fill the normal homeowners review and editor fields. It is not limited to a small fixed subset, and it still marks every guessed answer in `field_estimates`.
 
@@ -531,7 +534,7 @@ Probe/vintage estimates are still used where they are stronger than an LLM guess
 - `purchase_date`
 - `hurricane_resistant_windows` for Florida homes built in or after 2002
 
-Everything else Coverage Cat estimates is surfaced with `source: "zdr_openai"` and must be treated as a guess pending human confirmation in the portal review step.
+Everything else Coverage Cat estimates is surfaced with `source: "zdr_openai"` and must be treated as a guess pending human confirmation in the final review step.
 
 For enum/list fields, the static OpenAPI document is intentionally permissive. The authoritative vocabulary for a given intake response is the returned `schema` and each `missing_fields[]` item's `enum` list.
 
