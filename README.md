@@ -37,12 +37,14 @@ These remain available for existing installs and prompts:
 - Consumer OpenAPI: `https://www.coveragecat.com/api/consumer/openapi.yaml`
 - Delegated/tools discovery JSON: `https://www.coveragecat.com/api/agent`
 - Delegated/tools OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
+- PACT/A2A agent card for Instinct and similar personal agents: `https://www.coveragecat.com/.well-known/agent-card.json`
 - Recommended MCP registration URL: `https://www.coveragecat.com/.well-known/mcp.json`
 - Skills hub: `https://www.coveragecat.com/ai/skills`
 
 ## Consumer-operated MCP default
 
 - If an agent first lands on `coveragecat.com`, start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
+- If the runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the Coverage Cat entrypoint, then follow the shopper-safe consumer MCP or consumer REST links it exposes. This is optional; MCP-native and direct-REST runtimes should keep using those paths directly.
 - Register `https://www.coveragecat.com/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts when the runtime supports MCP.
 - For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`.
 - Stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment` for umbrella post-quote follow-up.
