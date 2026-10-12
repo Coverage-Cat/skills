@@ -15,18 +15,21 @@ Read Coverage Cat's machine-readable surfaces before you infer the endpoint map:
 Start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`; those files route agents to Coverage Cat's MCP, REST, markdown, and browser-fallback resources. Do not drive the browser UI unless Coverage Cat should take over the shopper-facing flow.
 Keep the shopper on the machine-readable MCP or REST loop until Coverage Cat returns `resume_url` or you intentionally hand the browser over to Coverage Cat. `/umbrella` or `/intake` are fallback browser starts, not the preferred purchase entrypoints.
 
-1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+1. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, and `umbrella_consumer_service`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+1. If your runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the visible Coverage Cat entrypoint. Treat it as optional routing: keep the live shopper loop on Coverage Cat's consumer MCP or consumer REST surfaces after discovery, and do not force MCP-native or direct-REST runtimes onto PACT.
+2. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated agents to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, and `umbrella_consumer_service`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
    Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
    Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-2. That consumer-operated subset stays valid through quote review, declarations upload, `payment_needed`, secure payment UI when available, and `payment_url` fallback. Do not pivot to delegated umbrella tools just to reach checkout. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
-3. Use the delegated operator MCP or delegated umbrella API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
-4. `GET /api/consumer` is the authoritative shopper-agent discovery document for personal consumer umbrella runs. It lists the consumer-prefill and direct follow-up URL templates and makes clear that these flows do not require a Coverage Cat operator API key.
-5. `GET /api/consumer/openapi.yaml` is the authoritative request/response schema for the shopper-agent umbrella handoff endpoints. Use `/api/agent` and `/api/agent/openapi.yaml` only when you intentionally need delegated operator endpoints or read-only tool APIs.
-6. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
+3. That consumer-operated subset stays valid through quote review, declarations upload, `payment_needed`, secure payment UI when available, `payment_url` fallback, authoritative `/policy` reads, and shopper-approved `/service` previews or requests for cancellation, refund, or support. Do not pivot to delegated umbrella tools just to reach checkout or aftercare. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
+4. Use the delegated operator MCP or delegated umbrella API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
+5. `GET /api/consumer` is the authoritative shopper-agent discovery document for personal consumer umbrella runs. It lists the consumer-prefill and direct follow-up URL templates and makes clear that these flows do not require a Coverage Cat operator API key.
+6. `GET /api/consumer/openapi.yaml` is the authoritative request/response schema for the shopper-agent umbrella handoff endpoints. Use `/api/agent` and `/api/agent/openapi.yaml` only when you intentionally need delegated operator endpoints or read-only tool APIs.
+7. Use the consumer-prefill and direct follow-up shopper surfaces only for insurance purchase and policy support. Coverage Cat records connector origin and permitted purpose on these handoffs; do not reuse that data for unrelated advertising or model-training loops.
+8. Treat the OpenAPI and discovery documents as the source of truth when the skill prose and your memory disagree.
 
 ## API Contract Quick Reference
 
@@ -40,9 +43,9 @@ curl -X POST https://www.coveragecat.com/api/consumer/umbrella/prefill \
   -d '{"credit_consent_pending":true,"intake":{"full_name":"Taylor Example"}}'
 ```
 
-Sandbox and errors: set top-level `sandbox: true` only on the first delegated create call for a rehearsal `uid`; the consumer-prefill handoff does not use a separate sandbox flag. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
+Sandbox and errors: set top-level `sandbox: true` only on the first delegated `draft` call for a rehearsal `uid`, or on the first consumer umbrella prefill call when you want a fully synthetic shopper rehearsal on the consumer tool set. Delegated sandbox stops at mocked `quotes` and `status`; consumer umbrella sandbox can continue on consumer `issues`, `patch`, `select`, `bind`, `attach`, `payment`, `policy`, `service`, and `status` with synthetic data only. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
 
-Coverage Cat rotates a fresh `intake_access_token` in every successful direct follow-up response on the consumer-prefill path. Always reuse the newest token you have for the next `/api/intake/:uid/...` call.
+On the shopper REST direct follow-up path, Coverage Cat rotates a fresh `intake_access_token` in every successful response. Always reuse the newest token you have for the next `/api/intake/:uid/...` call.
 
 Payment progression on the delegated path stays in `status`: `chosen -> documents_needed -> documents_pending_review -> payment_needed -> waiting_on_carrier -> bound`. When `payment_needed` is returned, Coverage Cat also returns `payment_url`.
 
@@ -51,10 +54,10 @@ Payment progression on the delegated path stays in `status`: `chosen -> document
 This skill supports two different jobs. Pick one path first, because the consumer-prefill handoff and the operator-partner path do not share the same loop.
 
 1. Use the consumer-prefill path when the shopper's own AI agent can gather facts from their vault, prior messages, or connected files before handing them to Coverage Cat.
-2. When your runtime is on the default consumer MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment`.
-3. Path 1 can stay on that consumer-operated subset through quoted offers, declarations upload, `payment_needed`, secure payment UI when available, and `payment_url` fallback; do not switch to delegated tools just to reach checkout.
+2. When your runtime is on the default consumer MCP and no operator bearer key is present, stay on the consumer-operated subset from Path 1: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, and `umbrella_consumer_service`.
+3. Path 1 can stay on that consumer-operated subset through quoted offers, declarations upload, `payment_needed`, secure payment UI when available, `payment_url` fallback, authoritative policy reads, and shopper-approved policy-service requests; do not switch to delegated tools just to reach checkout or aftercare.
 4. Use the operator-partner path only when you have a real Coverage Cat operator bearer key and approved back-office context you can use to prefill the application.
-5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then uses the returned `intake_access_token` for direct follow-up if your runtime can stay in chat. Path 2 uses the delegated operator API.
+5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then keeps follow-up authorization in the hidden MCP session when you stay on the default consumer MCP, or uses the returned `intake_access_token` on the shopper REST follow-up API when your runtime falls back to direct HTTP. Path 2 uses the delegated operator API.
 
 Coverage Cat also exposes read-only calculator and finder APIs. These are information tools, not purchase flows:
 
@@ -73,6 +76,7 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
 
 1. Use this path when the shopper wants their own AI agent to gather the fullest umbrella application from user-controlled context before a single review step, or when you do not have an operator key.
 2. On a cold start, do not open with a questionnaire. Call `POST /api/consumer/umbrella/prefill` first with `credit_consent_pending: true` and the fullest `intake` or estimate you can assemble. On the very first consumer-prefill handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
+   Optional shopper sandbox: set top-level `sandbox: true` only on this first consumer-prefill call when you want a fully synthetic rehearsal. That same consumer sandbox `uid` can then continue through `issues`, `patch`, `select`, `bind`, `attach`, `payment`, `policy`, `service`, and coarse `status`, but every offer, upload, payment credential, and policy outcome stays synthetic test data only.
    Use canonical consumer umbrella keys such as `full_name`, `email`, `phone_number`, `birthday`, `marital_status`, `license_state`, `license_number`, `occupation`, `line_of_work`, `spouse_full_name`, `spouse_birthday`, `spouse_license_state`, `spouse_license_number`, `address.{street,city,state,zip}`, `approximate_asset_value` or `net_worth_numeric`, `desired_coverage_limit`, `required_coverage_e_limit`, `vehicle_count` or `umbrella_details.motorized_vehicle_count`, `motorcycles`, `antique_vehicles`, `jet_skis`, `large_watercraft`, `property_count`, `non_us_property_count`, `current_auto_coverages`, `professional_entertainer_or_public_figure`, `household_open_claim`, `liability_loss_in_last_5_years`, `liability_loss_over_50k`, `four_or_more_losses_over_25k`, `reckless_driving_conviction`, and `felony`.
    Avoid non-canonical consumer keys such as `street`, `city`, `state`, `zip`, `drivers_license_state`, `drivers_license_number`, `net_worth`, or `desired_umbrella_liability_limit`.
    `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for Unsure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation.
@@ -122,8 +126,8 @@ Use these endpoints when the user asks for estimates, claim/coverage modeling, o
      }
    }
    ```
-3. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Treat `review_summary` as a checkpoint snapshot, not the final decision about whether the human needs to be interrupted yet. Until a later follow-up response shows quote progress, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. If it already includes a `review` preview plus a bundled `next_question` for shopper-owned details such as full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, use that as the one review turn rather than falling back to a one-field questionnaire. Ask only for the explicitly missing shopper-owned fields staged there, and keep already reviewed values in the review section for corrections-only instead of asking the shopper to re-key them. If marital status means Coverage Cat still needs spouse or partner identity or license fields, keep spouse full name, spouse date of birth, spouse driver's license state, and spouse driver's license number in that same review turn instead of opening a second follow-up. If Coverage Cat says it reused a recent in-progress umbrella draft for the same email address, tell the shopper the reviewed values may come from that earlier unfinished Coverage Cat application. Do not describe those reused values as `historical_mode` unless the matching `field_estimates` row actually says so. When you summarize the gathered details or remaining items, use short labeled bullets or sections rather than a prose paragraph. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
-4. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with the latest `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data.
+3. Keep the returned `uid` and `polling_token`. On the default consumer MCP, Coverage Cat keeps follow-up authorization in the hidden MCP session after prefill, so continue with uid-only follow-up tool calls instead of asking the model to carry an intake bearer token. On the shopper REST fallback, keep the returned `intake_access_token` too and replace it whenever a successful direct follow-up response rotates it. Treat `review_summary` as a checkpoint snapshot, not the final decision about whether the human needs to be interrupted yet. Until a later follow-up response shows quote progress, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. If it already includes a `review` preview plus a bundled `next_question` for shopper-owned details such as full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, use that as the one review turn rather than falling back to a one-field questionnaire. Ask only for the explicitly missing shopper-owned fields staged there, and keep already reviewed values in the review section for corrections-only instead of asking the shopper to re-key them. If marital status means Coverage Cat still needs spouse or partner identity or license fields, keep spouse full name, spouse date of birth, spouse driver's license state, and spouse driver's license number in that same review turn instead of opening a second follow-up. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. When you summarize the gathered details or remaining items, use short labeled bullets or sections rather than a prose paragraph. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
+4. If your runtime can continue in chat, stay on the same consumer-operated MCP subset with uid-only follow-up calls, or on the shopper REST fallback call `GET /api/intake/:uid/issues` with the latest `Authorization: Bearer <intake_access_token>`, and keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data.
 5. Use `resume_url` only as the browser fallback when your runtime cannot continue in chat or the user explicitly wants Coverage Cat's UI on `/umbrella?resume=...`.
 6. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
 7. If your runtime cannot prefill, fall back to the current environment origin plus `/umbrella` and stop there instead of imitating the delegated operator loop.
@@ -141,7 +145,9 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 7. If `select` or `issues` returns `needs_more_info_to_bind` or `ready_to_finalize`, call `POST /api/intake/:uid/bind` with the latest bearer token and only the current `next_question` fields inside `intake`. This later bind-stage follow-up is where actual vehicle details may be requested for selected offers such as Markel; do not move that request into the pre-submit review. When the response says `ready_to_finalize`, call `bind` again with the same `uid` and no `intake` patch.
 8. If `select`, `bind`, or `issues` returns `documents_needed`, upload declarations through `POST /api/intake/:uid/attach` with the latest bearer token. You may send one file with `filename`, base64 `content`, and `type` in `declarations | auto_declarations`, or send multiple files together in one call with `attachments[]`. If both the home and auto declarations are already available, prefer one attach call so the shopper only has to approve one upload turn. Use `attach` only after selection and only when Coverage Cat explicitly asks for documents.
 9. If Coverage Cat returns `payment_needed`, first call `POST /api/intake/:uid/payment` with `payment_collection_requested: true` to request a secure Stripe SetupIntent session. If your runtime confirms the registered secure payment UI is available, display it and wait for completion; do not collect card details through conversational text. Then call the same endpoint again with `setup_intent_id` and `payment_method_id` after the shopper completes the secure form. If the secure UI is unavailable, share `payment_url` and the specific fallback reason, and let Coverage Cat's browser handle secure payment or carrier e-sign. Keep `GET /api/intake/:uid/issues` as the structured polling loop for post-choose processing, `waiting_on_carrier`, and `bound`. Never describe payment-method setup as premium collected or active insurance.
-10. Keep `GET /api/consumer/status?token=...` as the coarse fallback if you only need non-PII progress.
+10. Once Coverage Cat returns `bound` or later `cancelled`, call `GET /api/intake/:uid/policy` with the latest bearer token to fetch the authoritative policy record, selected-offer summary, downloadable policy documents, support contact, and any already-open service requests. Use this read before you describe the final policy packet.
+11. If the shopper wants cancellation, refund help, or general policy support, first call `POST /api/intake/:uid/service` with `request_type`, `reason`, and any `requested_effective_date` or `details`, but omit `confirm_request` (or send `false`) to preview the coverage effect, refund uncertainty, carrier conditions, and whether approval is still required. Only after the shopper approves that preview should you call the same endpoint again with `confirm_request: true`. Opening a request is not the same as a completed cancellation or refund.
+12. Keep `GET /api/consumer/status?token=...` as the coarse fallback if you only need non-PII progress.
 
 ### Path 2: Operator-partner delegated flow
 
@@ -160,7 +166,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
 ## Authentication
 
-Path 1, the consumer-prefill handoff, does not use an operator bearer key for the initial prefill call. Coverage Cat returns a rotating `intake_access_token` that the agent should send back as `Authorization: Bearer <intake_access_token>` on `GET /api/intake/:uid/issues`, `PATCH /api/intake/:uid`, `POST /api/intake/:uid/select`, `POST /api/intake/:uid/bind`, and `POST /api/intake/:uid/attach`. Always reuse the newest token returned by the latest direct follow-up response. Path 2, the delegated operator loop, uses an operator bearer key.
+Path 1, the consumer-prefill handoff, does not use an operator bearer key for the initial prefill call. On the shopper REST fallback, Coverage Cat returns a rotating `intake_access_token` that the agent should send back as `Authorization: Bearer <intake_access_token>` on `GET /api/intake/:uid/issues`, `PATCH /api/intake/:uid`, `POST /api/intake/:uid/select`, `POST /api/intake/:uid/bind`, `POST /api/intake/:uid/attach`, `POST /api/intake/:uid/payment`, `GET /api/intake/:uid/policy`, and `POST /api/intake/:uid/service`. Always reuse the newest token returned by the latest direct follow-up response. On the default consumer MCP, Coverage Cat instead keeps that follow-up authorization in the hidden MCP session after prefill so the follow-up tools take `uid` without asking the model to carry the token. Path 2, the delegated operator loop, uses an operator bearer key.
 
 Do not ask a personal shopper for a Coverage Cat operator API key or delegated OAuth just to run Path 1. Stay on the consumer MCP or the shopper-safe REST surface for consumer-prefill and direct follow-up.
 
@@ -187,7 +193,7 @@ Keep the conversation short, safe, and user-led:
 
 1. Pick the path first. Use the consumer-prefill handoff when you are working from the user's own context, and the delegated loop when you have an operator bearer key plus approved back-office context.
 2. Search that available context first and assemble the fullest umbrella application you can before involving the human.
-3. Keep the returned `uid`, `intake_access_token`, and `polling_token` together; they are the full consumer handoff state for chat continuation. Replace `intake_access_token` whenever a direct follow-up response rotates it.
+3. Keep the returned `uid` and `polling_token` together. On the default consumer MCP, Coverage Cat keeps the follow-up authorization in the hidden MCP session after prefill. On the shopper REST fallback, keep the current `intake_access_token` too; it is part of the handoff state for chat continuation and must be replaced whenever a direct follow-up response rotates it.
 4. On delegated umbrella draft calls, send non-user-confirmed values in `intake` and attach matching `field_estimates` metadata so Coverage Cat can persist provenance and mark them in review. On the initial consumer umbrella prefill handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
 5. Keep `needs_more_info` behind the scenes when you can. The intended UX is that the human sees only the completed review page, or at most one staged review turn that also gathers the final shopper-owned details bundle.
 6. On every pre-submit user-facing turn, explicitly say the application is not submitted yet and Coverage Cat has not received a submitted application yet.
@@ -212,13 +218,13 @@ Keep the conversation short, safe, and user-led:
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the shopper, use short labeled bullets or sections rather than a prose paragraph.
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
-- If Coverage Cat stages a review plus shopper-detail `next_question`, show the assembled review and ask only for the explicitly missing shopper-owned fields together in one message, in plain English rather than field names. Keep already reviewed values in the review section for corrections-only instead of asking the shopper to re-key them. Keep the assembled review and the requested items in labeled bullets or sections. When it includes full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn instead of splitting it up. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver's license state, or spouse driver's license number, keep that spouse bundle in the same message too instead of opening a second follow-up. If Coverage Cat says it reused a recent in-progress umbrella draft for the same email address, explain that reviewed values may come from that earlier unfinished Coverage Cat application rather than from `historical_mode` unless the matching `field_estimates` row says so.
+- If Coverage Cat stages a review plus shopper-detail `next_question`, show the assembled review and ask only for the explicitly missing shopper-owned fields together in one message, in plain English rather than field names. Keep already reviewed values in the review section for corrections-only instead of asking the shopper to re-key them. Keep the assembled review and the requested items in labeled bullets or sections. When it includes full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, and net worth, keep that as one turn instead of splitting it up. If marital status means Coverage Cat also asks for spouse or partner full name, spouse date of birth, spouse driver's license state, or spouse driver's license number, keep that spouse bundle in the same message too instead of opening a second follow-up. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff.
 - On delegated umbrella draft calls, any value coming from CRM, documents, email threads, or heuristics that the human has not directly confirmed yet should be sent in `intake` with a matching `field_estimates` row carrying `field`, `source`, and `confidence`. On the initial consumer umbrella handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
 - Do not send `vehicles` rows before submission. Use `vehicle_count` or `umbrella_details.motorized_vehicle_count` for the household vehicle count, and if the staged review shows the wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you surface the final review.
 - Do not ask for credit consent on pre-submit review turns. Once the shopper is actively choosing an offer, you may collect the real user's `Yes` in that same reply so `select` can proceed without a second consent-only turn.
 - When quoted offers include Monoline or Markel, explain during quote review that current home and auto declarations are still required before payment and that secure checkout is usually ready within about 5-10 minutes once those uploads are on file.
-- Use `resume_url` only as a browser fallback. When Coverage Cat reaches `payment_needed`, prefer the chat-native `/payment` flow when your runtime can render the secure payment UI; otherwise hand the user to the returned browser URL for payment or carrier-managed signing, including the specific fallback reason.
-- In sandbox mode, use fake or test contact details and stop at `status`. Do not treat sandbox offers, tokens, or links as a real customer handoff.
+- Use `resume_url` only as a browser fallback. When Coverage Cat reaches `payment_needed`, prefer the chat-native `/payment` flow when your runtime can render the secure payment UI; otherwise hand the user to the returned browser URL for payment or carrier-managed signing, including the specific fallback reason. Once Coverage Cat later returns `bound` or `cancelled`, fetch `/policy` before you summarize documents or support, and use `/service` only after the shopper approves opening a cancellation, refund, or support request.
+- In sandbox mode, use fake or test contact details. Delegated sandbox stops at `status`; consumer umbrella sandbox can continue only on the consumer follow-up tools through synthetic `select`, `bind`, `attach`, `payment`, `policy`, `service`, and `status`. Do not treat sandbox offers, tokens, or links as a real customer handoff.
 
 ## API Loop
 
@@ -296,7 +302,7 @@ If the response is:
 - `ineligible`: tell the user Coverage Cat cannot complete delegated umbrella purchase for that state yet.
 - `409 conflict`: Coverage Cat found a more advanced recent delegated umbrella session for that buyer email. Reuse the returned `uid` and continue from its current `status` instead of retrying `draft`.
 
-If the response also includes `sandbox: true`:
+If the response also includes `sandbox: true` on the delegated path:
 
 - Treat the session as mocked test data.
 - Keep the same `uid` through `quotes` and `status`.
@@ -324,7 +330,7 @@ Call `POST /api/agent/umbrella/quotes` with:
 Rules:
 
 - Preliminary umbrella quotes do not require credit consent. If the application changed, go back to `draft` and wait for a fresh `review_token`.
-- If this is a sandbox session, the returned offers are mocked and later live-continuation endpoints are intentionally unavailable.
+- If this is a delegated sandbox session, the returned offers are mocked and later live-continuation endpoints are intentionally unavailable.
 
 If the response is `pending_quotes`:
 
@@ -347,7 +353,7 @@ If the response is `quoted`:
 - Use `selection_guidance` to explain the suggested default choice.
 - If `selection_guidance.same_reply_requirements` lists an offer, surface those listed items as a short conditional checklist bullet so the shopper can answer them in the same selection reply instead of waiting for a later bind-only turn.
 - Make clear that premiums are estimates until final underwriting.
-- If the response also includes `sandbox: true`, stop at display/testing: do not call `select`, `bind`, or `attach` on this `uid`.
+- If this is a delegated sandbox session, stop at display/testing: do not call `select`, `bind`, or `attach` on this `uid`.
 
 If the response is `no_quotes`:
 
@@ -370,7 +376,7 @@ Rules for the consent block:
 - Only proceed on an explicit `Yes`. If the user says anything else, stop and explain that Coverage Cat cannot bind an offer without the credit-pull authorization.
 - If Coverage Cat returns `credit_consent_required` because consent was not sent or was declined, render `credit_consent_question` for the real user. If `next_question` is also present, ask for the consent and every listed bind detail in the same shopper-facing turn, then retry `select` with the same `selection_token`, the user's `Yes`, and those `intake` answers.
 
-Do not call this step for sandbox sessions. Sandbox umbrella currently stops at mocked `quotes` and `status`.
+Do not call this step for delegated sandbox sessions. Delegated sandbox umbrella currently stops at mocked `quotes` and `status`.
 
 Handle the response like this:
 
@@ -390,7 +396,7 @@ If `select` or `status` says the offer `needs_more_info_to_bind`, call `POST /ap
 - Include a minimal `intake` patch with only the fields from the current bind-stage `next_question`.
 - Do not send quote-affecting edits here. If the user wants to change material application data, go back to the draft/review flow instead.
 
-Do not call this step for sandbox sessions. Sandbox umbrella currently stops at mocked `quotes` and `status`.
+Do not call this step for delegated sandbox sessions. Delegated sandbox umbrella currently stops at mocked `quotes` and `status`.
 
 Handle the response like this:
 
@@ -416,7 +422,7 @@ For Monoline and Markel, proactively collect the user's current auto and home de
 
 Use `POST /api/agent/umbrella/status` to keep the user in chat after selection.
 
-For sandbox sessions, use `status` only to rehearse the mocked draft/review/quote loop. If the payload includes `sandbox: true`, keep treating every link, offer, and next step as test data.
+For delegated sandbox sessions, use `status` only to rehearse the mocked draft/review/quote loop. If the payload includes `sandbox: true`, keep treating every link, offer, and next step as test data.
 
 Interpret the main statuses like this:
 
@@ -425,7 +431,7 @@ Interpret the main statuses like this:
 - If the API returns `poll_after_seconds`, use that as the default poll cadence. If the status stays pending, keep the user informed that processing is still in progress.
 - `payment_needed`: Coverage Cat has the declarations on file and is ready for payment collection. If your runtime can securely collect payment details, use `POST /api/intake/:uid/payment`; otherwise share `payment_url`.
 - `waiting_on_carrier`: no user action is needed. Tell the user Coverage Cat is waiting on the carrier's follow-up path. Offer `offers_url` if they want to review the selected offer. For agency-pay carriers, this means declarations uploads and payment are already on file. For RLI-style flows, any remaining signing or payment link comes from the carrier.
-- `bound`: tell the user the policy is bound.
+- `bound`: tell the user the policy is bound. On the consumer handoff path, fetch `GET /api/intake/:uid/policy` or call `umbrella_consumer_policy` before you summarize the policy packet, documents, or support links.
 - `info_requested`: Coverage Cat has a manual follow-up request. Keep the user in chat if you can, and only use the fallback link if you need the exact human-authored request.
 - `blocked`: Coverage Cat hit a carrier-side block. Do not re-collect the same information again unless Coverage Cat asks for it.
 
