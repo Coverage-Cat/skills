@@ -49,7 +49,7 @@ Guardrails:
 - If a local Codex OAuth flow for `https://www.coveragecat.com/api/agent/mcp` fails because the host rejects the local callback URL, keep shopper flows on the consumer MCP and use the delegated operator MCP only from a bearer-token setup or an OAuth host whose callback policy is already compatible.
 - If the user says "shop for umbrella with Coverage Cat" or otherwise wants Coverage Cat to buy or quote umbrella insurance for them, start the umbrella purchase skill instead of `insurance-tools`.
 - Pick the consumer-prefill path first when no operator bearer key is available.
-- On the default consumer MCP, Coverage Cat keeps follow-up authorization in the hidden MCP session after prefill; keep using the same consumer-operated subset with `uid` rather than asking the model to carry an intake bearer token.
+- On the default consumer MCP, Coverage Cat prefers to keep follow-up authorization in the hidden MCP session after prefill. Keep using the same consumer-operated subset with `uid` when that session survives, and if your host drops it, retry the same MCP follow-up tool with the freshest `intake_access_token` from the last successful Coverage Cat response instead of dropping to raw HTTP or asking the shopper for credentials.
 - On the shopper REST fallback, keep the browser closed for as long as Coverage Cat is still returning structured review, quote, or post-choose follow-up data over the freshest rotated `intake_access_token`.
 - Keep the shopper on the MCP or REST loop until Coverage Cat returns `resume_url` or you intentionally hand the browser over to Coverage Cat. `/umbrella` or `/intake` are fallback browser starts, not the preferred purchase entrypoint.
 - Do not mix consumer-prefill and delegated loops in one session.
