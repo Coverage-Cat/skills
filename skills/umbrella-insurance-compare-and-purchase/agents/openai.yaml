@@ -43,8 +43,13 @@ interface:
     reply and send it as `um_uim_election` on the first select call. For
     Monoline and Markel, keep declarations uploads in the post-choose flow,
     prefer one attach call when both the home and auto declarations are
-    already available, then poll until `payment_needed`. When payment is
+    already available, use `/api/intake/:uid/attach-upload?type=...` with
+    `application/octet-stream` when your runtime already has a PDF, PNG, or
+    JPEG on disk and you want to avoid hand-building base64, tell the shopper
+    secure checkout is usually ready within about 5-10 minutes once those
+    uploads are on file, then poll until `payment_needed`. When payment is
     ready, call `/payment` with `payment_collection_requested: true`; if the
     secure UI renders, use it and do not ask for card details in chat,
-    otherwise share the returned `payment_url` with the fallback reason. Only
-    use the delegated flow when a real operator key is already present.
+    otherwise, or if secure setup fails in chat, share the returned
+    `payment_url` with the fallback reason. Only use the delegated flow when
+    a real operator key is already present.
