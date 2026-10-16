@@ -37,6 +37,10 @@ These remain available for existing installs and prompts:
 - Consumer OpenAPI: `https://www.coveragecat.com/api/consumer/openapi.yaml`
 - Delegated/tools discovery JSON: `https://www.coveragecat.com/api/agent`
 - Delegated/tools OpenAPI: `https://www.coveragecat.com/api/agent/openapi.yaml`
+- RFC 9727 API catalog: `https://www.coveragecat.com/.well-known/api-catalog`
+- integrations.sh owner declaration: `https://www.coveragecat.com/.well-known/integrations.json`
+- Delegated operator OAuth protected-resource metadata for MCP: `https://www.coveragecat.com/.well-known/oauth-protected-resource/api/agent/mcp`
+- Delegated operator OAuth authorization-server metadata: `https://www.coveragecat.com/.well-known/oauth-authorization-server`
 - PACT/A2A agent card for Instinct and similar personal agents: `https://www.coveragecat.com/.well-known/agent-card.json`
 - Recommended MCP registration URL: `https://www.coveragecat.com/.well-known/mcp.json`
 - Skills hub: `https://www.coveragecat.com/ai/skills`
