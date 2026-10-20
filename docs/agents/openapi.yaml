@@ -329,13 +329,13 @@ components:
           description: Real-user consent for a soft credit check, collected on the selection turn when Coverage Cat asks for it.
           properties:
             answer:
-              description: "The shopper's own answer to Coverage Cat's credit_consent_question."
+              description: "Records the shopper's own reply agreeing to Coverage Cat's credit_consent_question. Send it only after the shopper agrees in their own words."
               enum:
                 - 'Yes'
               type: string
             collected_from_user:
               const: true
-              description: Attests that the shopper gave this answer directly in the conversation rather than the agent inferring it.
+              description: Attests that the shopper personally answered the credit consent question in this conversation, rather than the agent assuming their consent.
               type: boolean
           required:
             - answer
@@ -1262,7 +1262,7 @@ components:
           properties:
             payment_collection_requested:
               const: true
-              description: Use true on the first payment call to request a secure Stripe SetupIntent session for hosted card collection.
+              description: Starts secure card collection by asking Coverage Cat to prepare a Stripe SetupIntent for hosted card entry. Send it on the first payment call, without setup_intent_id or payment_method_id.
               type: boolean
           required:
             - payment_collection_requested
@@ -1462,7 +1462,7 @@ components:
           description: "Fullest currently known consumer application patch assembled from the user's own context before any piecemeal follow-up. Use canonical consumer umbrella keys such as `address.street`, `address.city`, `address.state`, `address.zip`, `license_state`, `license_number`, `approximate_asset_value` or `net_worth_numeric`, `desired_coverage_limit`, `required_coverage_e_limit`, and `vehicle_count` or `umbrella_details.motorized_vehicle_count` for umbrella counts. Avoid top-level `street`/`city`/`state`/`zip`, `drivers_license_state`, `drivers_license_number`, `net_worth`, or `desired_umbrella_liability_limit`. Do not send `vehicles` rows before submission. Use `vehicle_count` or `umbrella_details.motorized_vehicle_count` for the household vehicle count; actual vehicle details are collected later only if a selected offer requires them, such as a Markel bind follow-up. `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for I'm not sure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation."
           properties:
             current_auto_coverages:
-              description: "Band for the shopper's current underlying auto liability limits: `unsure` means I'm not sure; `500k/1m` means $500k/$1 Million/$100k or higher; `500k/500k` means $500k/$500k/$100k or $500k CSL; `300k/300k` means $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` means $100k/$300k/$100k or lower. Choose the strongest band the shopper's actual limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know."
+              description: "Which band the shopper's current underlying auto liability limits fall into: `500k/1m` covers $500k/$1 Million/$100k or higher; `500k/500k` covers $500k/$500k/$100k or $500k CSL; `300k/300k` covers $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` covers $100k/$300k/$100k or lower. Pick the strongest band the shopper's actual limits fully satisfy. Underlying auto limits gate umbrella eligibility, so use `unsure` only when the shopper genuinely does not know their limits."
               enum:
                 - unsure
                 - 500k/1m
@@ -2414,14 +2414,14 @@ components:
           description: Short shopper-approved reason for the request.
           type: string
         request_type:
-          description: 'Post-purchase action to preview or open: `policy_cancellation` asks the carrier to cancel the policy as of requested_effective_date, `refund_request` asks the carrier or billing provider to review a refund or outstanding balance without changing coverage, and `support_case` opens a general support case.'
+          description: 'What the shopper wants done after purchase. `policy_cancellation` asks the carrier to end the policy on requested_effective_date; `refund_request` asks the carrier or billing provider to review a refund or outstanding balance without changing coverage; `support_case` opens a general support case for anything else.'
           enum:
             - policy_cancellation
             - refund_request
             - support_case
           type: string
         requested_effective_date:
-          description: Date the shopper wants a policy_cancellation to take effect. The carrier reviews it and may approve a different date.
+          description: 'Day the shopper wants a cancellation to take effect; used only for policy_cancellation. It is a request: the carrier reviews it and may set a different date.'
           format: date
           type: string
       required:
@@ -2725,14 +2725,14 @@ components:
           description: Short shopper-approved reason for the request.
           type: string
         request_type:
-          description: 'Post-purchase action to preview or open: `policy_cancellation` asks the carrier to cancel the policy as of requested_effective_date, `refund_request` asks the carrier or billing provider to review a refund or outstanding balance without changing coverage, and `support_case` opens a general support case.'
+          description: 'What the shopper wants done after purchase. `policy_cancellation` asks the carrier to end the policy on requested_effective_date; `refund_request` asks the carrier or billing provider to review a refund or outstanding balance without changing coverage; `support_case` opens a general support case for anything else.'
           enum:
             - policy_cancellation
             - refund_request
             - support_case
           type: string
         requested_effective_date:
-          description: Date the shopper wants a policy_cancellation to take effect. The carrier reviews it and may approve a different date.
+          description: 'Day the shopper wants a cancellation to take effect; used only for policy_cancellation. It is a request: the carrier reviews it and may set a different date.'
           format: date
           type: string
       required:
@@ -3034,7 +3034,7 @@ components:
           description: 'Set to true on the single human review turn once the user has reviewed the application and wants Coverage Cat to submit now. Homeowners also require credit_check_authorized: true on that same final turn; umbrella consent for a soft credit check is collected later at select.'
           type: boolean
         current_auto_coverages:
-          description: "Band for the shopper's current underlying auto liability limits: `unsure` means I'm not sure; `500k/1m` means $500k/$1 Million/$100k or higher; `500k/500k` means $500k/$500k/$100k or $500k CSL; `300k/300k` means $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` means $100k/$300k/$100k or lower. Choose the strongest band the shopper's actual limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know."
+          description: "Which band the shopper's current underlying auto liability limits fall into: `500k/1m` covers $500k/$1 Million/$100k or higher; `500k/500k` covers $500k/$500k/$100k or $500k CSL; `300k/300k` covers $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` covers $100k/$300k/$100k or lower. Pick the strongest band the shopper's actual limits fully satisfy. Underlying auto limits gate umbrella eligibility, so use `unsure` only when the shopper genuinely does not know their limits."
           enum:
             - unsure
             - 500k/1m
