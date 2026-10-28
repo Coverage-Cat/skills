@@ -1,5 +1,19 @@
 # Coverage Cat Skills
 
+## ChatGPT app
+
+For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
+Use the tools advertised by that endpoint to prepare the application, obtain the
+shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
+or `payment_url` as a link: the shopper completes document uploads and final
+checkout on Coverage Cat's website. Afterward, read status or the policy tool.
+Do not open or complete checkout for the shopper, collect card details in chat,
+or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
+intake tokens and sessions work only on its dedicated endpoint.
+
+The default consumer MCP and REST instructions below apply to other hosts and
+retain their existing upload and payment capabilities.
+
 Public installable skills for Coverage Cat.
 
 ## Install
@@ -49,7 +63,7 @@ These remain available for existing installs and prompts:
 
 - If an agent first lands on `coveragecat.com`, start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
 - If the runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the Coverage Cat entrypoint, then follow the shopper-safe consumer MCP or consumer REST links it exposes. This is optional; MCP-native and direct-REST runtimes should keep using those paths directly.
-- Register `https://www.coveragecat.com/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts when the runtime supports MCP.
+- Register `https://www.coveragecat.com/.well-known/mcp.json` in manifest-aware hosts when the runtime supports MCP.
 - For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`.
 - Stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment` for umbrella post-quote follow-up.
 - The umbrella consumer subset can stay on the no-operator path through `payment_needed`, secure payment UI when available, and `payment_url`; do not switch to delegated tools just to reach checkout.
