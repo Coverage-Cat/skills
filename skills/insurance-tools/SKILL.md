@@ -5,6 +5,20 @@ description: "Use when an agent needs Coverage Cat's research-only insurance cal
 
 # Insurance Tools
 
+## ChatGPT app
+
+For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
+Use the tools advertised by that endpoint to prepare the application, obtain the
+shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
+or `payment_url` as a link: the shopper completes document uploads and final
+checkout on Coverage Cat's website. Afterward, read status or the policy tool.
+Do not open or complete checkout for the shopper, collect card details in chat,
+or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
+intake tokens and sessions work only on its dedicated endpoint.
+
+The default consumer MCP and REST instructions below apply to other hosts and
+retain their existing upload and payment capabilities.
+
 Use this skill for Coverage Cat's read-only research APIs and tool pages.
 
 ## Coverage Cat tools

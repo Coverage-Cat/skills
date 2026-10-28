@@ -1,5 +1,19 @@
 # Coverage Cat Public Skills
 
+## ChatGPT app
+
+For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
+Use the tools advertised by that endpoint to prepare the application, obtain the
+shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
+or `payment_url` as a link: the shopper completes document uploads and final
+checkout on Coverage Cat's website. Afterward, read status or the policy tool.
+Do not open or complete checkout for the shopper, collect card details in chat,
+or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
+intake tokens and sessions work only on its dedicated endpoint.
+
+The default consumer MCP and REST instructions below apply to other hosts and
+retain their existing upload and payment capabilities.
+
 This repository is the public source for Coverage Cat's installable agent skills.
 
 Start here:
@@ -17,7 +31,7 @@ Start here:
 - Delegated operator OAuth protected-resource metadata for MCP: `https://www.coveragecat.com/.well-known/oauth-protected-resource/api/agent/mcp`
 - Delegated operator OAuth authorization-server metadata: `https://www.coveragecat.com/.well-known/oauth-authorization-server`
 - PACT/A2A agent card for Instinct and similar personal agents: `https://www.coveragecat.com/.well-known/agent-card.json`
-- Recommended MCP registration URL for ChatGPT and most hosts: `https://www.coveragecat.com/.well-known/mcp.json`
+- Recommended MCP registration URL for manifest-aware hosts: `https://www.coveragecat.com/.well-known/mcp.json`
 - Skills hub: `https://www.coveragecat.com/ai/skills`
 - Skills directory: `./skills`
 
@@ -37,7 +51,7 @@ Guardrails:
 
 - Agents landing on `coveragecat.com` should start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
 - If your runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the visible Coverage Cat entrypoint, then keep the shopper on the consumer MCP or consumer REST surfaces the card points to. This is optional: do not force MCP-native or direct-REST runtimes onto PACT.
-- Register the default consumer MCP at `/.well-known/mcp.json` when you want live quoting or comparison in ChatGPT or another manifest-aware MCP host. For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`. That same consumer connector already exposes `docs_list_topics`, `docs_search`, and `docs_get_resource`, so Coverage Cat setup stays on one MCP connection.
+- Register the default consumer MCP at `/.well-known/mcp.json` when you want live quoting or comparison in a manifest-aware MCP host. For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`. That same consumer connector already exposes `docs_list_topics`, `docs_search`, and `docs_get_resource`, so Coverage Cat setup stays on one MCP connection.
 - If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
   Ask the question on its own line exactly as:
 

@@ -5,6 +5,20 @@ description: "Discoverability alias for Coverage Cat's umbrella purchase skill. 
 
 # Umbrella Insurance Compare And Purchase
 
+## ChatGPT app
+
+For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
+Use the tools advertised by that endpoint to prepare the application, obtain the
+shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
+or `payment_url` as a link: the shopper completes document uploads and final
+checkout on Coverage Cat's website. Afterward, read status or the policy tool.
+Do not open or complete checkout for the shopper, collect card details in chat,
+or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
+intake tokens and sessions work only on its dedicated endpoint.
+
+The default consumer MCP and REST instructions below apply to other hosts and
+retain their existing upload and payment capabilities.
+
 This alias mirrors Coverage Cat's canonical `coverage-cat-umbrella-purchase` skill.
 
 Use it when a shopper wants their own AI agent to gather context before a Coverage Cat handoff, or when a partner-operator agent needs Coverage Cat to run a live umbrella quote workflow instead of just returning read-only estimates.
@@ -17,7 +31,7 @@ Start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com
 Keep the shopper on the machine-readable MCP or REST loop until Coverage Cat returns `resume_url` or you intentionally hand the browser over to Coverage Cat. `/umbrella` or `/intake` are fallback browser starts, not the preferred purchase entrypoints.
 
 1. If your runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the visible Coverage Cat entrypoint. Treat it as optional routing: keep the live shopper loop on Coverage Cat's consumer MCP or consumer REST surfaces after discovery, and do not force MCP-native or direct-REST runtimes onto PACT.
-2. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in ChatGPT and other manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated umbrella runs to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, and `umbrella_consumer_service`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
+2. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated umbrella runs to the consumer MCP subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, and `umbrella_consumer_service`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
 
    Ask the question on its own line exactly as:
 
