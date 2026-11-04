@@ -1579,6 +1579,16 @@ components:
         credit_consent_question:
           description: Short compatibility prompt. Display the complete credit_consent_disclosure.text verbatim and return the complete versioned receipt rather than relying on this prompt alone.
           type: string
+        monoline_mvr_consent_disclosure:
+          allOf:
+            - $ref: '#/components/schemas/ConsentDisclosure'
+          description: Complete Monoline-specific MVR and consumer-report authorization. Show its text and source_url before collecting the separate receipt.
+          required:
+            - source_url
+            - source_updated_at
+        monoline_mvr_consent_question:
+          description: Compatibility prompt returned when the selected Monoline offer still needs its separate authorization. Display the complete disclosure text and source URL instead of this short prompt alone.
+          type: string
         notification_channel:
           additionalProperties: false
           properties:
@@ -1894,6 +1904,7 @@ components:
             - chosen
             - credit_consent_pending
             - credit_consent_required
+            - monoline_mvr_consent_required
             - dev_success
             - documents_needed
             - documents_pending_review
@@ -1991,6 +2002,7 @@ components:
             - chosen
             - credit_consent_pending
             - credit_consent_required
+            - monoline_mvr_consent_required
             - dev_success
             - documents_needed
             - documents_pending_review
@@ -2400,6 +2412,9 @@ components:
           allOf:
             - $ref: '#/components/schemas/ConsentDisclosure'
           description: Complete Monoline-specific MVR and consumer-report authorization. Show its text and source_url before collecting the separate receipt.
+          required:
+            - source_url
+            - source_updated_at
         monoline_mvr_consent_question:
           description: Compatibility prompt returned when the selected Monoline offer still needs its separate authorization. Display the complete disclosure text and source URL instead of this short prompt alone.
           type: string
@@ -2439,6 +2454,114 @@ components:
           type: string
         uid:
           type: string
+      type: object
+    SelectConsentRequiredContext:
+      properties:
+        agent_instructions:
+          items:
+            type: string
+          type: array
+        next_question:
+          $ref: '#/components/schemas/NextQuestion'
+        response_summary:
+          type: string
+        review_items:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        uid:
+          type: string
+        user_action_required:
+          type:
+            - string
+            - 'null'
+      required:
+        - uid
+        - response_summary
+        - agent_instructions
+      type: object
+    CreditConsentRequiredResource:
+      allOf:
+        - $ref: '#/components/schemas/SelectConsentRequiredContext'
+        - properties:
+            credit_consent_disclosure:
+              $ref: '#/components/schemas/ConsentDisclosure'
+            credit_consent_question:
+              type: string
+            monoline_mvr_consent_disclosure:
+              allOf:
+                - $ref: '#/components/schemas/ConsentDisclosure'
+              description: Present for a selected Monoline offer so both authorizations can be collected in the same shopper turn.
+              required:
+                - source_url
+                - source_updated_at
+            monoline_mvr_consent_question:
+              type: string
+            status:
+              const: credit_consent_required
+              type: string
+          required:
+            - status
+            - credit_consent_question
+            - credit_consent_disclosure
+          type: object
+    MonolineMvrConsentRequiredResource:
+      allOf:
+        - $ref: '#/components/schemas/SelectConsentRequiredContext'
+        - properties:
+            monoline_mvr_consent_disclosure:
+              allOf:
+                - $ref: '#/components/schemas/ConsentDisclosure'
+              required:
+                - source_url
+                - source_updated_at
+            monoline_mvr_consent_question:
+              type: string
+            status:
+              const: monoline_mvr_consent_required
+              type: string
+          required:
+            - status
+            - monoline_mvr_consent_question
+            - monoline_mvr_consent_disclosure
+          type: object
+    StaleSelectionResource:
+      properties:
+        message:
+          type: string
+        status:
+          const: stale_selection
+          type: string
+        uid:
+          type: string
+      required:
+        - uid
+        - status
+        - message
+      type: object
+    SelectConflictResource:
+      oneOf:
+        - $ref: '#/components/schemas/CreditConsentRequiredResource'
+        - $ref: '#/components/schemas/MonolineMvrConsentRequiredResource'
+        - $ref: '#/components/schemas/StaleSelectionResource'
+    DelegatedSelectConflictResponse:
+      allOf:
+        - $ref: '#/components/schemas/SelectConflictResource'
+        - properties:
+            error:
+              const: conflict
+              type: string
+          required:
+            - error
+          type: object
+    ConsumerSelectConflictResponse:
+      additionalProperties: false
+      properties:
+        resource:
+          $ref: '#/components/schemas/SelectConflictResource'
+      required:
+        - resource
       type: object
     AgentKeyConfirmRequest:
       additionalProperties: false
@@ -5242,8 +5365,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Offer selection is stale and the user must review fresh offers.
+                $ref: '#/components/schemas/DelegatedSelectConflictResponse'
+          description: The response is a top-level conflict payload. Its status is credit_consent_required, monoline_mvr_consent_required, or stale_selection; consent-required payloads include the complete disclosure evidence to present before retrying.
           headers:
             Coverage-Cat-API-Version:
               $ref: '#/components/headers/CoverageCatApiVersion'
@@ -7322,8 +7445,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: The selection token is stale, consent is missing, or the intake is not ready for selection.
+                $ref: '#/components/schemas/ConsumerSelectConflictResponse'
+          description: The response wraps the selection conflict under resource. Its resource.status is credit_consent_required, monoline_mvr_consent_required, or stale_selection; consent-required resources include the complete disclosure evidence to present before retrying.
           headers:
             Coverage-Cat-API-Version:
               $ref: '#/components/headers/CoverageCatApiVersion'
