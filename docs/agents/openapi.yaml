@@ -181,38 +181,6 @@ components:
             - auto_declarations
           type: string
       type: object
-    ConsumerHomeownersPrefillRequest:
-      additionalProperties: false
-      properties:
-        credit_consent_pending:
-          const: true
-          description: Must be true. Signals that the user has not yet been shown the review page. Homeowners handoffs collect consumer-report authorization on that review turn; umbrella handoffs defer credit consent until the user chooses an offer at `select`.
-          type: boolean
-        field_estimates:
-          description: Optional estimate metadata for values that are defensible but not yet directly confirmed by the user. On the initial consumer umbrella handoff, prefer sending only `intake`; add top-level `field_estimates` only when you are certain each `field` already matches a current umbrella review field path.
-          items:
-            additionalProperties: true
-            type: object
-          type: array
-        intake:
-          additionalProperties: true
-          description: Fullest currently known consumer homeowners application patch assembled from the user's own context before any piecemeal follow-up. The first create call must already identify whether the property is standard homeowners, condo, or landlord coverage.
-          properties:
-            home:
-              description: Initial product-selection row for the first create call. Send a single object or an array, and make sure the first home row already distinguishes standard homeowners, condo, or landlord coverage.
-              oneOf:
-                - $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
-                - items:
-                    $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
-                  minItems: 1
-                  type: array
-          required:
-            - home
-          type: object
-      required:
-        - intake
-        - credit_consent_pending
-      type: object
     OfferSnapshot:
       properties:
         annual_price:
@@ -233,94 +201,9 @@ components:
             - object
             - 'null'
       type: object
-    HomeownersMissingField:
-      properties:
-        description:
-          type: string
-        enum:
-          items: {}
-          type: array
-        field:
-          type: string
-        format:
-          type: string
-        label:
-          type: string
-        message:
-          type: string
-        path:
-          items:
-            type: string
-          type: array
-        type:
-          oneOf:
-            - type: string
-            - items:
-                type: string
-              type: array
-      type: object
-    HomeownersOfferSummary:
-      properties:
-        address:
-          additionalProperties: true
-          type: object
-        annual_price:
-          type: number
-        carrier:
-          type: string
-        coverage_summary:
-          type: string
-        deductible:
-          type: number
-        dwelling_coverage:
-          description: |
-            Coverage A / replacement cost as priced by the carrier. Derived from a Replacement Cost Estimator, not from purchase price or appraised value; do not substitute either of those in operator-side displays.
-          type: number
-        is_estimate:
-          type: boolean
-        personal_liability:
-          type: number
-        policy_subtype:
-          type: string
-        policy_subtype_display:
-          type: string
-        property_id:
-          description: Stable per operator plus normalized property address; reuse it as a property correlation key, not an intake-row identifier.
-          type: string
-        quote_number:
-          type: string
-        recommended:
-          type: boolean
-      type: object
     ConsumerBindRequest:
       oneOf:
         - $ref: '#/components/schemas/ConsumerUmbrellaBindRequest'
-        - $ref: '#/components/schemas/ConsumerHomeownersBindRequest'
-    HomeownersDashboardResponse:
-      properties:
-        filters:
-          additionalProperties: true
-          type: object
-        generated_at:
-          type: string
-        has_more:
-          description: True when another dashboard page is available with the returned next_cursor.
-          type: boolean
-        next_cursor:
-          description: Opaque cursor to request the next dashboard page.
-          type: string
-        operator_uid:
-          type: string
-        properties:
-          items:
-            $ref: '#/components/schemas/HomeownersPropertyStatusRow'
-          type: array
-        property_count:
-          type: integer
-        status_counts:
-          additionalProperties: true
-          type: object
-      type: object
     ConsentDisclosure:
       additionalProperties: false
       properties:
@@ -415,66 +298,6 @@ components:
       required:
         - selection_token
         - selection_confirmed
-      type: object
-    HomeownersPropertyStatusRow:
-      properties:
-        field_estimates:
-          description: |
-            Field-level estimates Coverage Cat filled for this property. See `HomeownersFieldEstimate` for handling rules. Estimated values keep quoting moving, but unconfirmed estimated home fields must still be reviewed in the homeowner portal before final bind.
-          items:
-            $ref: '#/components/schemas/HomeownersFieldEstimate'
-          type: array
-        fix_issues_email_available:
-          description: |
-            True when the operator may trigger Coverage Cat to send the homeowner a secure fix-issues email for this request UID.
-          type: boolean
-        home_index:
-          type: integer
-        home_ownership:
-          type: string
-        homeowner_fix_issues_request_login_url:
-          description: |
-            Shareable homeowner sign-in request page for the fix-issues flow. Use this when the property is still in `needs_more_info` and the homeowner should complete the missing items in Coverage Cat's GUI.
-          format: uri
-          type: string
-        homeowner_quotes_request_login_url:
-          description: |
-            Shareable homeowner sign-in request page for the offers view. The homeowner still has to request their own login link by email, so this URL does not sign the operator or agent into the homeowner's private quotes page.
-          format: uri
-          type: string
-        inserted_at:
-          type: string
-        location:
-          additionalProperties: true
-          type: object
-        new_purchase:
-          type: boolean
-        offers_page_available:
-          type: boolean
-        offers_published:
-          description: True once homeowners offers have been published to the homeowner's portal.
-          type: boolean
-        property_id:
-          description: Stable per operator plus normalized property address; reuse it as a property correlation key, not an intake-row identifier.
-          type: string
-        property_type:
-          type: string
-        request_uid:
-          type: string
-        status:
-          enum:
-            - needs_more_info
-            - pending_quotes
-            - quoted
-            - quotes_published
-          type: string
-        status_summary:
-          description: Coarse operator-facing summary for the current status, without exact missing-field or offer counts.
-          type: string
-        submitted_at:
-          type: string
-        updated_at:
-          type: string
       type: object
     ErrorResponse:
       additionalProperties: true
@@ -1330,34 +1153,6 @@ components:
             - setup_intent_id
             - payment_method_id
           type: object
-    HomeownersQuotesRequest:
-      additionalProperties: false
-      properties:
-        credit_consent:
-          $ref: '#/components/schemas/CreditConsentReceipt'
-        intake:
-          additionalProperties: true
-          description: |
-            Partial homeowners intake patch containing the fullest currently known applicant and property facts you can assemble from approved operator-side context. On the first create call, `intake.home` must already identify whether each property is standard homeowners, condo, or landlord coverage: send both a non-rental `home_ownership` and a non-condo `property_type` for standard homeowners, `property_type: condo` for condo coverage, or `home_ownership: owned_rental` / a rented `rental_status` for landlord coverage. Coverage Cat rejects the first create call instead of guessing if that product-selection row is missing. This endpoint accepts partial follow-up patches after create; for a given intake's live requiredness, treat the returned `schema` and `missing_fields[].enum` as authoritative. Common eventual base requirements include `home_sqft`, `new_purchase`, the property address, `home_ownership`, and `property_type`, with state- and property-specific follow-ups returned in `missing_fields`. For any non-user-confirmed home value you include under `intake.home[]`, also include a matching `intake.home[].field_estimates[]` row using the same object shape returned in responses. Those rows should mirror the current field value, carry an opaque provenance `source`, set `confirmed_by_user: false`, and include `estimated_at`; Coverage Cat will persist that value as an estimate and send the homeowner back through review before final bind in the consumer portal. After the homeowner reviews the assembled application, display the complete returned `credit_consent_disclosure.text` verbatim and send the resulting top-level `credit_consent` receipt with the shopper's answer, display and collection attestations, and that disclosure's version and hash. A raw authorization boolean is not consent evidence. Do NOT derive homeowners dwelling replacement cost from purchase price or appraised value — that field must come from a Replacement Cost Estimator or be left for Coverage Cat's carrier-side estimator to fill. Do NOT send lender-side fields (note_rate, term_months, escrow flags); Coverage Cat prices homeowners premium directly and those inputs have no effect on the intake. Optional mortgage metadata such as `intake.home[].loans[].lender_name`, `loan_number`, `mortgagee_clause`, and `loan_effective_date` may be sent when available; partial loan rows are accepted. For enum/list fields, treat the `schema` and `missing_fields[].enum` returned by this endpoint as the authoritative allowed vocabulary for the current intake state.
-          properties:
-            home:
-              description: |
-                Initial product-selection row for the first create call. Send a single object or an array, and make sure each home row already distinguishes standard homeowners, condo, or landlord coverage. Later update or poll calls may omit `home` when unchanged.
-              oneOf:
-                - $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
-                - items:
-                    $ref: '#/components/schemas/ConsumerHomeownersInitialHome'
-                  minItems: 1
-                  type: array
-          type: object
-        sandbox:
-          description: |
-            Optional mocked-mode flag for delegated homeowners testing. Set this to true only when creating a brand-new delegated homeowners session. The sandbox flag sticks to that `uid`, reuses the real validation and one-time review/credit-consent checkpoint, skips live customer emails and carrier traffic, returns `pending_quotes` after the first successful submit, and returns mocked homeowners offers on a later poll of the same `uid`.
-          type: boolean
-        uid:
-          description: Existing delegated homeowners intake identifier. Omit to create a new intake.
-          type: string
-      type: object
     ToolBatchRequest:
       additionalProperties: false
       properties:
@@ -1373,88 +1168,6 @@ components:
     ConsumerSelectRequest:
       oneOf:
         - $ref: '#/components/schemas/ConsumerUmbrellaSelectRequest'
-        - $ref: '#/components/schemas/ConsumerHomeownersSelectRequest'
-    HomeownersQuotesResponse:
-      properties:
-        agent_instructions:
-          items:
-            type: string
-          type: array
-        credit_consent_disclosure:
-          $ref: '#/components/schemas/ConsentDisclosure'
-        homeowner_fix_issues_request_login_url:
-          description: |
-            Safe homeowner-facing sign-in request page for the fix-issues flow. Coverage Cat returns this while the delegated intake still needs more information and you want the homeowner to complete those remaining items in Coverage Cat's GUI.
-          format: uri
-          type: string
-        homeowner_portal_url:
-          deprecated: true
-          description: |
-            Secure Coverage Cat consumer portal link for this intake. The homeowner uses this portal to review details, choose an offer, confirm any estimated home answers, and complete final bind. Treat this as a sensitive direct session link; if you need a safer pass-through URL, use `homeowner_quotes_request_login_url`.
-          format: uri
-          type: string
-        homeowner_quotes_request_login_url:
-          description: |
-            Safe homeowner-facing sign-in request page for the offers view. Share this with the homeowner when you need them to reach their offers page without handing over an operator or direct OTP login link.
-          format: uri
-          type: string
-        job_id:
-          description: Stable delegated-homeowners async job identifier. Reuses the intake uid.
-          type: string
-        known_summary:
-          additionalProperties: true
-          description: |
-            Current delegated homeowners intake summary. This may include PII such as applicant name, applicant email, and full insured-property addresses. It may also include a `homes[].field_estimates[]` array per home listing values that were estimated by either the operator or Coverage Cat. Delegated quoting may proceed with these estimates, but unconfirmed estimated home fields are sent back through the homeowner review flow before final bind completes in Coverage Cat's consumer portal. Do not treat this object as safe-to-log telemetry.
-          type: object
-        missing_fields:
-          items:
-            $ref: '#/components/schemas/HomeownersMissingField'
-          type: array
-        offers:
-          items:
-            $ref: '#/components/schemas/HomeownersOfferSummary'
-          type: array
-        offers_page_url:
-          deprecated: true
-          description: Backwards-compatible alias for `homeowner_portal_url`.
-          format: uri
-          type: string
-        operator_dashboard_url:
-          description: Short-lived browser login link for the operator homeowners dashboard, usually prefiltered to this intake UID.
-          format: uri
-          type: string
-        poll_after_seconds:
-          description: Suggested minimum wait before polling again.
-          type: integer
-        poll_request:
-          additionalProperties: true
-          description: Structured POST request reference for polling the same delegated homeowners uid.
-          type: object
-        response_summary:
-          type: string
-        sandbox:
-          description: True when this delegated homeowners response is mocked sandbox data.
-          type: boolean
-        schema:
-          additionalProperties: true
-          type: object
-        status:
-          enum:
-            - needs_more_info
-            - pending_quotes
-            - quoted
-          type: string
-        status_endpoint:
-          additionalProperties: true
-          description: Structured status polling reference for the async job.
-          type: object
-        status_url:
-          description: GET endpoint returning coarse non-PII status rows for this delegated homeowners request.
-          format: uri
-          type: string
-        uid:
-          type: string
-      type: object
     ToolBatchResult:
       properties:
         error:
@@ -1476,7 +1189,6 @@ components:
             - auto_estimates
             - collision_and_comprehensive_coverage
             - file_a_claim
-            - homeowners_agent_finder
           type: string
       type: object
     ConsumerUmbrellaBindRequest:
@@ -2366,7 +2078,6 @@ components:
             - auto_estimates
             - collision_and_comprehensive_coverage
             - file_a_claim
-            - homeowners_agent_finder
           type: string
       required:
         - tool
@@ -2390,38 +2101,6 @@ components:
       required:
         - zip
         - home_sqft
-      type: object
-    ConsumerHomeownersBindRequest:
-      additionalProperties: false
-      properties:
-        bind_confirmed:
-          const: true
-          description: Must be true. Confirms the shopper approved the exact homeowners preview, including carrier-direct email delivery for any payment or signing links.
-          type: boolean
-        preview_token:
-          description: Bind-preview token returned by the homeowners ready_to_finalize follow-up payload.
-          type: string
-      required:
-        - preview_token
-        - bind_confirmed
-      type: object
-    HomeownersAgentFinderRequest:
-      additionalProperties: false
-      properties:
-        limit:
-          default: 25
-          type: integer
-        lines:
-          description: Homeowners, dwelling_fire, condominium, renters, mobile_home, personal_lines, property_and_casualty, or surplus_lines.
-          items:
-            type: string
-          type: array
-        zip:
-          pattern: ^[0-9]{5}$
-          type: string
-      required:
-        - zip
-        - lines
       type: object
     CalculatorResponse:
       additionalProperties: true
@@ -2516,20 +2195,6 @@ components:
         value:
           description: Current serialized intake value for the estimated field.
           type: string
-      type: object
-    ConsumerHomeownersSelectRequest:
-      additionalProperties: false
-      properties:
-        selection_confirmed:
-          const: true
-          description: Must be true. Confirms the shopper chose this exact homeowners offer.
-          type: boolean
-        selection_token:
-          description: Offer-selection token returned by the quoted homeowners follow-up payload.
-          type: string
-      required:
-        - selection_token
-        - selection_confirmed
       type: object
     QuoteResponse:
       properties:
@@ -2868,30 +2533,6 @@ components:
         title:
           type: string
       type: object
-    HomeownersFixIssuesEmailResponse:
-      properties:
-        agent_instructions:
-          items:
-            type: string
-          type: array
-        homeowner_fix_issues_request_login_url:
-          description: |
-            Safe homeowner-facing sign-in request page for the same fix-issues flow Coverage Cat emailed. Share this only when you need a pass-through link in chat.
-          format: uri
-          type: string
-        operator_dashboard_url:
-          description: Short-lived browser login link for the operator homeowners dashboard, usually prefiltered to this intake UID.
-          format: uri
-          type: string
-        response_summary:
-          type: string
-        status:
-          enum:
-            - email_sent
-          type: string
-        uid:
-          type: string
-      type: object
     StatusResponse:
       properties:
         agent_instructions:
@@ -2985,60 +2626,6 @@ components:
         uid:
           type: string
       type: object
-    ConsumerHomeownersInitialHome:
-      additionalProperties: true
-      anyOf:
-        - description: Standard homeowners coverage. Send both a non-rental home_ownership and a non-condo property_type.
-          properties:
-            home_ownership:
-              enum:
-                - owned_primary
-                - owned_seasonal
-                - under_construction
-              type: string
-            property_type:
-              enum:
-                - single_family
-                - duplex
-                - triplex
-                - quadplex
-                - apartment
-                - townhouse
-                - manufacture_or_mobile
-              type: string
-          required:
-            - home_ownership
-            - property_type
-          type: object
-        - description: 'Condo coverage. Send property_type: condo.'
-          properties:
-            property_type:
-              const: condo
-              type: string
-          required:
-            - property_type
-          type: object
-        - description: 'Landlord coverage. Send home_ownership: owned_rental.'
-          properties:
-            home_ownership:
-              const: owned_rental
-              type: string
-          required:
-            - home_ownership
-          type: object
-        - description: Landlord coverage. A rented rental_status also counts when home_ownership is not yet known.
-          properties:
-            rental_status:
-              enum:
-                - room
-                - attached_unit
-                - detached_unit
-              type: string
-          required:
-            - rental_status
-          type: object
-      description: Initial homeowners home row. Coverage Cat needs this row to distinguish standard homeowners, condo, or landlord coverage before it can assemble the rest of the application.
-      type: object
     QuoteRequest:
       additionalProperties: false
       properties:
@@ -3081,7 +2668,7 @@ components:
       type: object
     IntakeAssistantPatchRequest:
       additionalProperties: true
-      description: "Partial intake patch for the first-party assistant follow-up API. Send user-confirmed edits directly as top-level intake fields. For homeowners after submission, this same patch call can also send `message_reply` to answer insurer or shopper follow-up already surfaced under `conversation.messages`, and `reply_to_message_id` pins the reply to one returned conversation message when Coverage Cat marks `conversation.reply_pending`. For umbrella intakes, top-level field_estimates[] rows may accompany inferred values when you are certain each field path matches a current umbrella review field. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count` and never send `vehicles` rows on this pre-submit patch. `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for I'm not sure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before sending them. Set confirm_submission: true on the final one-time review turn to submit and start quote generation."
+      description: "Partial intake patch for the first-party assistant follow-up API. Send user-confirmed edits directly as top-level intake fields. Existing policyholders may send support correspondence with `message_reply` and an optional `reply_to_message_id`; new homeowners applications and submissions remain unavailable. For umbrella intakes, top-level field_estimates[] rows may accompany inferred values when you are certain each field path matches a current umbrella review field. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count` and never send `vehicles` rows on this pre-submit patch. `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for I'm not sure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before sending them. Set confirm_submission: true on the final one-time review turn to submit and start quote generation."
       properties:
         confirm_submission:
           description: 'Set to true on the single human review turn once the user has reviewed the application and wants Coverage Cat to submit now. Homeowners also require a versioned top-level credit_consent receipt on that same final turn; umbrella consumer-report authorization is collected later at select.'
@@ -3103,10 +2690,10 @@ components:
             $ref: '#/components/schemas/UmbrellaFieldEstimateInput'
           type: array
         message_reply:
-          description: Homeowners post-submit only. Send the reply text Coverage Cat should deliver in-thread when the latest issues payload shows `conversation.reply_pending`, such as answering a carrier underwriting question.
+          description: Existing-policy support correspondence. Send the reply text Coverage Cat should deliver in-thread when the latest issues payload shows `conversation.reply_pending`. This does not start a new homeowners application.
           type: string
         reply_to_message_id:
-          description: Optional homeowners post-submit target from `conversation.messages[].message_id`. Use it when Coverage Cat returned a specific follow-up message to answer in-thread.
+          description: Optional existing-policy support target from `conversation.messages[].message_id`. Use it when Coverage Cat returned a specific follow-up message to answer in-thread.
           type: integer
       type: object
     UmbrellaCalculatorRequest:
@@ -3148,35 +2735,6 @@ components:
       required:
         - zip
       type: object
-    HomeownersFieldEstimate:
-      description: |
-        One estimated answer on a homeowners intake, whether it came from operator-side context or Coverage Cat's own probe/estimator pass. These estimates can keep delegated quoting moving, but homeowners finalization still happens in Coverage Cat's consumer portal. If the operator's system later has a real user-confirmed value for the same field, resend it in the next intake payload and Coverage Cat will overwrite the estimate.
-      properties:
-        confidence:
-          description: |
-            Coverage Cat's internal confidence, not carrier acceptance risk. Prioritize confirming `low` confidence estimates with the customer before binding.
-          enum:
-            - low
-            - medium
-            - high
-          type: string
-        confirmed_by_user:
-          description: |
-            Whether a human has re-sent this field as a confirmed answer on a subsequent update, whether from the delegated operator payload or the homeowner reviewing the pre-filled value in Coverage Cat's portal.
-          type: boolean
-        estimated_at:
-          format: date-time
-          type: string
-        field:
-          description: Dot-path of the field on the intake (e.g. `property_type`).
-          type: string
-        source:
-          description: |
-            Opaque provenance label for the estimate. Common operator-side labels include `crm`, `email_thread`, `policy_declarations`, and `prior_coverage_cat_session`; Coverage Cat-generated labels include `loan_file`, `zillow`, `realtor`, `vintage_rule`, and `zdr_openai`. Treat unknown values as opaque; new sources may be added over time.
-          type: string
-        value:
-          description: Estimated value. Type matches the underlying intake field.
-      type: object
     ToolBatchResponse:
       properties:
         error_count:
@@ -3212,9 +2770,9 @@ components:
       type: http
 info:
   description: |-
-    Which surface do you want? This document is the full contract and includes the delegated `/api/agent/*` endpoints, which require an operator-issued API key that Coverage Cat grants only to businesses transacting on behalf of their own customers. If you are a personal AI assistant shopping for your own human user, use `/api/consumer/openapi.yaml` instead: the consumer purchase flow for umbrella and homeowners needs no Coverage Cat credential, and you should never ask the shopper for one. The `x-coverage-cat-surface` extension on each operation below marks which surface it belongs to.
+    Which surface do you want? This document is the full contract and includes the delegated `/api/agent/*` endpoints, which require an operator-issued API key that Coverage Cat grants only to businesses transacting on behalf of their own customers. If you are a personal AI assistant shopping for your own human user, use `/api/consumer/openapi.yaml` instead: the consumer purchase flow for umbrella needs no Coverage Cat credential, and you should never ask the shopper for one. The `x-coverage-cat-surface` extension on each operation below marks which surface it belongs to.
 
-    Delegated-agent APIs for Coverage Cat purchase workflows and read-only insurance tools. Umbrella delegated purchase is a one-review-page flow: the operator-side agent fills the application from allowed context, Coverage Cat returns estimated-field metadata, and the human only reviews or corrects the final JSON before preliminary quotes are generated. Credit consent is collected after the user chooses an offer, at the `select` step, before Coverage Cat can bind. Homeowners delegated purchase is a near-single-endpoint operator flow: gather the fullest approved-context application first, mark non-user-confirmed home values with `field_estimates`, then show the complete returned `credit_consent_disclosure.text` verbatim during the homeowner's review and submit a top-level `credit_consent` receipt containing the homeowner's answer, both display and collection attestations, and the exact returned disclosure version and hash. A raw authorization boolean is not consent evidence. Coverage Cat then submits and quotes the intake asynchronously and routes the homeowner back through portal review for any remaining estimated home answers before final bind. Coverage Cat also exposes public consumer handoff endpoints at `/api/consumer/umbrella/prefill`, `/api/consumer/homeowners/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`. On the direct follow-up path, authenticate with the latest rotated `intake_access_token`, use `PATCH /api/intake/{uid}` only for pre-submit review, correction, and submission, and continue umbrella post-choose follow-up through `/api/intake/{uid}/select`, `/api/intake/{uid}/bind`, and `/api/intake/{uid}/attach`.
+    Delegated-agent APIs for Coverage Cat purchase workflows and read-only insurance tools. Umbrella delegated purchase is a one-review-page flow: the operator-side agent fills the application from allowed context, Coverage Cat returns estimated-field metadata, and the human only reviews or corrects the final JSON before preliminary quotes are generated. Credit consent is collected after the user chooses an offer, at the `select` step, before Coverage Cat can bind. Coverage Cat also exposes public consumer handoff endpoints at `/api/consumer/umbrella/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`. On the direct follow-up path, authenticate with the latest rotated `intake_access_token`, use `PATCH /api/intake/{uid}` only for pre-submit review, correction, and submission, and continue umbrella post-choose follow-up through `/api/intake/{uid}/select`, `/api/intake/{uid}/bind`, and `/api/intake/{uid}/attach`.
 
     Every credit-consent or optional service-contact receipt must include `presented_at`: the actual current RFC 3339 date-time when the complete corresponding disclosure text was shown. Coverage Cat accepts a presentation time within the prior 24 hours and no more than five minutes in the future.
 
@@ -3226,7 +2784,7 @@ info:
 
     Authenticated write operations also accept an `Idempotency-Key` header. Coverage Cat replays the cached successful response for the same operator, path, and key for 24 hours.
 
-    Public consumer handoff endpoints live at `/api/consumer/umbrella/prefill`, `/api/consumer/homeowners/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`.
+    Public consumer handoff endpoints live at `/api/consumer/umbrella/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`.
 
     Rate-limited endpoints return `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, and `RateLimit-Policy`. A `429` response also includes `Retry-After`.
   title: Coverage Cat Delegated Insurance Purchase APIs
@@ -4066,804 +3624,6 @@ paths:
             print(response.json())
       x-coverage-cat-surface: operator
       x-openai-isConsequential: false
-  /api/agent/homeowners/dashboard:
-    get:
-      description: Returns the operator's delegated homeowners queue as coarse non-PII per-property status rows. Use the optional filters to page the queue or focus on a single request UID, property identifier, or status bucket.
-      operationId: list_delegated_homeowners_property_statuses
-      parameters:
-        - description: Restrict results to a single delegated homeowners request UID.
-          in: query
-          name: uid
-          schema:
-            type: string
-        - description: Restrict results to a single non-PII property identifier returned by Coverage Cat.
-          in: query
-          name: property_id
-          schema:
-            type: string
-        - in: query
-          name: status
-          schema:
-            enum:
-              - needs_more_info
-              - pending_quotes
-              - quoted
-              - quotes_published
-            type: string
-        - in: query
-          name: limit
-          schema:
-            maximum: 100
-            minimum: 1
-            type: integer
-        - $ref: '#/components/parameters/DashboardCursor'
-        - $ref: '#/components/parameters/CoverageCatApiVersion'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HomeownersDashboardResponse'
-          description: |
-            Coarse non-PII delegated homeowners property statuses for this operator. This dashboard surface is intentionally less granular than the intake issue APIs: it does not list exact missing fields or exact offer counts.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid filters were provided.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid or missing API key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: The request used a shared key instead of an operator-issued key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Too many failed authentication attempts or delegated-agent requests. Honor the Retry-After header before retrying.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-      security:
-        - agent_api_key: []
-      summary: Read non-PII per-property status rows for outstanding delegated homeowners requests under the current operator key.
-      x-codeSamples:
-        - label: GET /api/agent/homeowners/dashboard
-          lang: cURL
-          source: |-
-            curl -X GET https://www.coveragecat.com/api/agent/homeowners/dashboard?limit=25 \
-              -H "Coverage-Cat-API-Version: v1" \
-              -H "Authorization: Bearer ccop_demo_operator_key"
-        - label: fetch
-          lang: JavaScript
-          source: |-
-            const response = await fetch("https://www.coveragecat.com/api/agent/homeowners/dashboard?limit=25", {
-              method: "GET",
-              headers: {
-                "Coverage-Cat-API-Version": "v1",
-                "Authorization": "Bearer ccop_demo_operator_key"
-              }
-            });
-            const data = await response.json();
-            console.log(data);
-        - label: requests
-          lang: Python
-          source: |-
-            import requests
-
-            response = requests.get(
-                "https://www.coveragecat.com/api/agent/homeowners/dashboard?limit=25",
-                headers={
-                    "Coverage-Cat-API-Version": "v1",
-                    "Authorization": "Bearer ccop_demo_operator_key"
-                },
-                timeout=30,
-            )
-
-            print(response.json())
-      x-coverage-cat-surface: operator
-      x-openai-isConsequential: false
-  /api/agent/homeowners/dashboard/session:
-    post:
-      description: Returns a short-lived browser session URL for Coverage Cat's operator homeowners dashboard, optionally prefiltered to the same UID, property-id, status, limit, and cursor view the API would return.
-      operationId: create_delegated_homeowners_dashboard_session
-      parameters:
-        - description: Prefilter the browser dashboard to a single delegated homeowners request UID.
-          in: query
-          name: uid
-          schema:
-            type: string
-        - description: Prefilter the browser dashboard to a single non-PII property identifier returned by Coverage Cat.
-          in: query
-          name: property_id
-          schema:
-            type: string
-        - in: query
-          name: status
-          schema:
-            enum:
-              - needs_more_info
-              - pending_quotes
-              - quoted
-              - quotes_published
-            type: string
-        - in: query
-          name: limit
-          schema:
-            maximum: 100
-            minimum: 1
-            type: integer
-        - $ref: '#/components/parameters/DashboardCursor'
-        - $ref: '#/components/parameters/CoverageCatApiVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                properties:
-                  dashboard_url:
-                    format: uri
-                    type: string
-                type: object
-          description: A short-lived browser dashboard URL for this operator.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid filters were provided.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid or missing API key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: The request used a shared key instead of an operator-issued key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Too many failed authentication attempts or delegated-agent requests. Honor the Retry-After header before retrying.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-      security:
-        - agent_api_key: []
-      summary: Mint a short-lived browser login link for the operator homeowners dashboard.
-      x-codeSamples:
-        - label: POST /api/agent/homeowners/dashboard/session
-          lang: cURL
-          source: |-
-            curl -X POST https://www.coveragecat.com/api/agent/homeowners/dashboard/session?limit=25&uid=homeowners-req-123 \
-              -H "Coverage-Cat-API-Version: v1" \
-              -H "Authorization: Bearer ccop_demo_operator_key" \
-              -H "Idempotency-Key: demo-post-api-agent-homeowners-dashboard-session"
-        - label: fetch
-          lang: JavaScript
-          source: |-
-            const response = await fetch("https://www.coveragecat.com/api/agent/homeowners/dashboard/session?limit=25&uid=homeowners-req-123", {
-              method: "POST",
-              headers: {
-                "Coverage-Cat-API-Version": "v1",
-                "Authorization": "Bearer ccop_demo_operator_key",
-                "Idempotency-Key": "demo-post-api-agent-homeowners-dashboard-session"
-              }
-            });
-            const data = await response.json();
-            console.log(data);
-        - label: requests
-          lang: Python
-          source: |-
-            import requests
-
-            response = requests.post(
-                "https://www.coveragecat.com/api/agent/homeowners/dashboard/session?limit=25&uid=homeowners-req-123",
-                headers={
-                    "Coverage-Cat-API-Version": "v1",
-                    "Authorization": "Bearer ccop_demo_operator_key",
-                    "Idempotency-Key": "demo-post-api-agent-homeowners-dashboard-session"
-                },
-                timeout=30,
-            )
-
-            print(response.json())
-      x-coverage-cat-surface: operator
-      x-openai-isConsequential: false
-  /api/agent/homeowners/fix-issues-email:
-    post:
-      description: |
-        Use this when a delegated homeowners request is still in `needs_more_info` and you want Coverage Cat itself to email the homeowner a direct sign-in link to the remaining issues. The response also includes `homeowner_fix_issues_request_login_url`, which is the safer pass-through link if you need to continue the same handoff in chat.
-      operationId: send_delegated_homeowners_fix_issues_email
-      parameters:
-        - $ref: '#/components/parameters/CoverageCatApiVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              additionalProperties: false
-              properties:
-                uid:
-                  description: Delegated homeowners request UID.
-                  type: string
-              required:
-                - uid
-              type: object
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HomeownersFixIssuesEmailResponse'
-          description: Coverage Cat queued the fix-issues email for this delegated homeowners intake.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid request, sandbox request, or no email/fix-issues route available yet.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid or missing API key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: The request used a shared key instead of an operator-issued key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Unknown delegated homeowners intake for this operator.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Too many failed authentication attempts or delegated-agent requests. Honor the Retry-After header before retrying.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-      security:
-        - agent_api_key: []
-      summary: Email the homeowner a secure sign-in link to the delegated homeowners fix-issues flow.
-      x-codeSamples:
-        - label: POST /api/agent/homeowners/fix-issues-email
-          lang: cURL
-          source: |-
-            curl -X POST https://www.coveragecat.com/api/agent/homeowners/fix-issues-email \
-              -H "Coverage-Cat-API-Version: v1" \
-              -H "Authorization: Bearer ccop_demo_operator_key" \
-              -H "Idempotency-Key: demo-post-api-agent-homeowners-fix-issues-email" \
-              -H "Content-Type: application/json" \
-              --data-binary @- <<'JSON'
-            {
-              "uid": "homeowners-req-123"
-            }
-            JSON
-        - label: fetch
-          lang: JavaScript
-          source: |-
-            const payload = {
-              "uid": "homeowners-req-123"
-            };
-
-            const response = await fetch("https://www.coveragecat.com/api/agent/homeowners/fix-issues-email", {
-              method: "POST",
-              headers: {
-                "Coverage-Cat-API-Version": "v1",
-                "Authorization": "Bearer ccop_demo_operator_key",
-                "Idempotency-Key": "demo-post-api-agent-homeowners-fix-issues-email",
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            console.log(data);
-        - label: requests
-          lang: Python
-          source: |-
-            import requests
-
-            payload = {
-                "uid": "homeowners-req-123"
-            }
-
-            response = requests.post(
-                "https://www.coveragecat.com/api/agent/homeowners/fix-issues-email",
-                headers={
-                    "Coverage-Cat-API-Version": "v1",
-                    "Authorization": "Bearer ccop_demo_operator_key",
-                    "Idempotency-Key": "demo-post-api-agent-homeowners-fix-issues-email",
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=30,
-            )
-
-            print(response.json())
-      x-coverage-cat-surface: operator
-      x-openai-isConsequential: true
-  /api/agent/homeowners/quotes:
-    post:
-      description: |
-        Use this endpoint as the primary operator-side enrichment loop for delegated homeowners purchase. Omit `uid` to create a new intake. Reuse the returned `uid` on every follow-up call. Start with the fullest intake patch you can assemble from approved operator-side context, and for any non-user-confirmed home value include matching `intake.home[].field_estimates` metadata. Keep credit consent out of the nested `intake`. During the homeowner's review, display the complete returned `credit_consent_disclosure.text` verbatim and resend the same `uid` with a top-level `credit_consent` receipt containing the homeowner's answer, `shown_to_user: true`, `collected_from_user: true`, and `disclosure_version` / `disclosure_hash` copied exactly from the returned disclosure's `version` / `text_hash`. A raw authorization boolean is insufficient. Do not break the intended second turn into a standalone current-policy-expiration question; if `policy_expire` is the remaining review gap, Coverage Cat can carry an estimated `policy_expire` value two months from today into that same review step. If `status` is `needs_more_info`, keep filling the returned `missing_fields` behind the scenes from your own systems first and only escalate to the human after approved context is exhausted. When Coverage Cat returns `homeowner_fix_issues_request_login_url`, share that safe sign-in request page if you want the homeowner to complete the remaining items in Coverage Cat's GUI. If `status` is `pending_quotes`, poll this same endpoint with the same `uid`. If `status` is `quoted`, summarize the returned offers and optionally share `homeowner_quotes_request_login_url`, where the homeowner can request their own login link before reviewing any unconfirmed estimated home answers and finishing bind in Coverage Cat's consumer portal. Set `sandbox: true` only on the first create call when you want mocked delegated homeowners test data instead of live customer email or carrier traffic.
-
-        Set `presented_at` to the actual current RFC 3339 time when the complete disclosure was shown. Coverage Cat accepts it only within the prior 24 hours and no more than five minutes in the future.
-      operationId: quote_delegated_homeowners_application
-      parameters:
-        - $ref: '#/components/parameters/CoverageCatApiVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/HomeownersQuotesRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HomeownersQuotesResponse'
-          description: Current delegated homeowners state.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '202':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HomeownersQuotesResponse'
-          description: Delegated homeowners intake accepted and submitted. Poll the status URL or resend the same uid until the response becomes quoted.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            Location:
-              $ref: '#/components/headers/Location'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid intake patch or malformed request.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid or missing API key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: The request used a shared key instead of an operator-issued key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Unknown delegated homeowners intake for this operator.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Too many failed authentication attempts or delegated-agent requests. Honor the Retry-After header before retrying.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-      security:
-        - agent_api_key: []
-      summary: Create, update, submit, or poll a delegated homeowners intake in a single operator-authenticated loop.
-      x-codeSamples:
-        - label: POST /api/agent/homeowners/quotes
-          lang: cURL
-          source: |-
-            curl -X POST https://www.coveragecat.com/api/agent/homeowners/quotes \
-              -H "Coverage-Cat-API-Version: v1" \
-              -H "Authorization: Bearer ccop_demo_operator_key" \
-              -H "Idempotency-Key: demo-post-api-agent-homeowners-quotes" \
-              -H "Content-Type: application/json" \
-              --data-binary @- <<'JSON'
-            {
-              "intake": {
-                "email": "taylor@example.test",
-                "full_name": "Taylor Example",
-                "home": [
-                  {
-                    "city": "San Francisco",
-                    "home_ownership": "owned_primary",
-                    "property_type": "single_family",
-                    "state": "CA",
-                    "street": "123 Main St",
-                    "zip": "94107"
-                  }
-                ]
-              }
-            }
-            JSON
-        - label: fetch
-          lang: JavaScript
-          source: |-
-            const payload = {
-              "intake": {
-                "email": "taylor@example.test",
-                "full_name": "Taylor Example",
-                "home": [
-                  {
-                    "city": "San Francisco",
-                    "home_ownership": "owned_primary",
-                    "property_type": "single_family",
-                    "state": "CA",
-                    "street": "123 Main St",
-                    "zip": "94107"
-                  }
-                ]
-              }
-            };
-
-            const response = await fetch("https://www.coveragecat.com/api/agent/homeowners/quotes", {
-              method: "POST",
-              headers: {
-                "Coverage-Cat-API-Version": "v1",
-                "Authorization": "Bearer ccop_demo_operator_key",
-                "Idempotency-Key": "demo-post-api-agent-homeowners-quotes",
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            console.log(data);
-        - label: requests
-          lang: Python
-          source: |-
-            import requests
-
-            payload = {
-                "intake": {
-                "email": "taylor@example.test",
-                "full_name": "Taylor Example",
-                "home": [{
-                "city": "San Francisco",
-                "home_ownership": "owned_primary",
-                "property_type": "single_family",
-                "state": "CA",
-                "street": "123 Main St",
-                "zip": "94107"
-            }]
-            }
-            }
-
-            response = requests.post(
-                "https://www.coveragecat.com/api/agent/homeowners/quotes",
-                headers={
-                    "Coverage-Cat-API-Version": "v1",
-                    "Authorization": "Bearer ccop_demo_operator_key",
-                    "Idempotency-Key": "demo-post-api-agent-homeowners-quotes",
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=30,
-            )
-
-            print(response.json())
-      x-coverage-cat-surface: operator
-      x-openai-isConsequential: true
   /api/agent/key/confirm:
     post:
       description: Exchanges the emailed verification code for an operator-scoped bearer token, creating or updating the operator registration details in the same step.
@@ -5285,7 +4045,7 @@ paths:
       x-openai-isConsequential: false
   /api/agent/tools/batch:
     post:
-      description: Batch the calculator and homeowners-agent-finder APIs into one authenticated call when an agent needs many independent read-only results without looping over individual endpoints.
+      description: Batch the calculator APIs into one authenticated call when an agent needs many independent read-only results without looping over individual endpoints.
       operationId: run_read_only_tools_batch
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -5451,165 +4211,6 @@ paths:
                     "Coverage-Cat-API-Version": "v1",
                     "Authorization": "Bearer ccop_demo_operator_key",
                     "Idempotency-Key": "demo-post-api-agent-tools-batch",
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=30,
-            )
-
-            print(response.json())
-      x-coverage-cat-surface: operator
-      x-openai-isConsequential: false
-  /api/agent/tools/homeowners-agents/search:
-    post:
-      description: Searches Coverage Cat's public California and Texas homeowners-agent datasets by ZIP and requested insurance lines, returning matching agent or agency records plus provenance and dataset freshness metadata.
-      operationId: search_homeowners_agents
-      parameters:
-        - $ref: '#/components/parameters/CoverageCatApiVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/HomeownersAgentFinderRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CalculatorResponse'
-          description: Calculator result.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid calculator input.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid or missing API key.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Calculator/tool request rate limit exceeded.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-      security:
-        - agent_api_key: []
-      summary: Search licensed homeowners agent records in California or Texas by ZIP and insurance lines.
-      x-codeSamples:
-        - label: POST /api/agent/tools/homeowners-agents/search
-          lang: cURL
-          source: |-
-            curl -X POST https://www.coveragecat.com/api/agent/tools/homeowners-agents/search \
-              -H "Coverage-Cat-API-Version: v1" \
-              -H "Authorization: Bearer ccop_demo_operator_key" \
-              -H "Idempotency-Key: demo-post-api-agent-tools-homeowners-agents-search" \
-              -H "Content-Type: application/json" \
-              --data-binary @- <<'JSON'
-            {
-              "lines": [
-                "homeowners"
-              ],
-              "zip": "94107"
-            }
-            JSON
-        - label: fetch
-          lang: JavaScript
-          source: |-
-            const payload = {
-              "lines": [
-                "homeowners"
-              ],
-              "zip": "94107"
-            };
-
-            const response = await fetch("https://www.coveragecat.com/api/agent/tools/homeowners-agents/search", {
-              method: "POST",
-              headers: {
-                "Coverage-Cat-API-Version": "v1",
-                "Authorization": "Bearer ccop_demo_operator_key",
-                "Idempotency-Key": "demo-post-api-agent-tools-homeowners-agents-search",
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            console.log(data);
-        - label: requests
-          lang: Python
-          source: |-
-            import requests
-
-            payload = {
-                "lines": ["homeowners"],
-                "zip": "94107"
-            }
-
-            response = requests.post(
-                "https://www.coveragecat.com/api/agent/tools/homeowners-agents/search",
-                headers={
-                    "Coverage-Cat-API-Version": "v1",
-                    "Authorization": "Bearer ccop_demo_operator_key",
-                    "Idempotency-Key": "demo-post-api-agent-tools-homeowners-agents-search",
                     "Content-Type": "application/json"
                 },
                 json=payload,
@@ -6866,190 +5467,6 @@ paths:
             print(response.json())
       x-coverage-cat-surface: operator
       x-openai-isConsequential: false
-  /api/consumer/homeowners/prefill:
-    post:
-      description: "Accepts the fullest consumer homeowners application you can assemble, prepares Coverage Cat's one-shot review and consumer-report authorization checkpoint, and returns the handoff `uid`, a rotating `intake_access_token` for direct API follow-up, a short-lived `/intake?resume=...` browser fallback URL, and a coarse public `polling_token`. On a cold start, ask only for the shopper's full name, email, property address, and whether the property should be treated as standard homeowners, condo, or landlord coverage first. The initial `intake.home[0]` data must preserve that distinction by sending `home_ownership: owned_rental` or a rented `rental_status` for landlord coverage, `property_type: condo` for condo coverage, or both a non-rental `home_ownership` and a non-condo `property_type` for standard homeowners coverage. Then recover core shopper and occupancy facts such as date of birth, marital status, and owner-occupied vs new-purchase from user-controlled context before calling this endpoint. Until a later follow-up response shows quote progress, the application is not submitted yet. Coverage Cat can then estimate many reviewable home fields for the review card. Stay on the same consumer follow-up loop through long-lag quote polling, `/api/intake/{uid}/select`, `/api/intake/{uid}/bind`, and later `/api/intake/{uid}/policy` plus `/api/intake/{uid}/service`; do not switch to delegated operator endpoints just to keep the shopper moving. Homeowners quotes or carrier bind follow-up may take up to 48 hours, so keep polling and keep the registered customer email channel on file. Coverage Cat does not collect first-party homeowners payment in chat; any carrier payment or signing link goes directly to the customer's email on file. On the review turn, tell the shopper explicitly that Coverage Cat has not submitted the application yet, ask for any remaining items or the consumer-report authorization Yes/No in plain English, and render gathered details plus remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. Successful direct follow-up responses rotate a fresh `intake_access_token`; always reuse the newest token you have."
-      operationId: create_consumer_homeowners_prefill
-      parameters:
-        - $ref: '#/components/parameters/CoverageCatApiVersion'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConsumerHomeownersPrefillRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConsumerPrefillResponse'
-          description: Consumer homeowners handoff prepared.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid request body.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Too many consumer handoff or public polling requests. Honor the Retry-After header before retrying.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Coverage Cat could not prepare the consumer homeowners handoff.
-          headers:
-            Coverage-Cat-API-Version:
-              $ref: '#/components/headers/CoverageCatApiVersion'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            X-Skill-Version:
-              $ref: '#/components/headers/SkillVersion'
-      security: []
-      summary: Create a consumer-prefill homeowners handoff.
-      x-codeSamples:
-        - label: POST /api/consumer/homeowners/prefill
-          lang: cURL
-          source: |-
-            curl -X POST https://www.coveragecat.com/api/consumer/homeowners/prefill \
-              -H "Coverage-Cat-API-Version: v1" \
-              -H "Idempotency-Key: demo-post-api-consumer-homeowners-prefill" \
-              -H "Content-Type: application/json" \
-              --data-binary @- <<'JSON'
-            {
-              "credit_consent_pending": true,
-              "intake": {
-                "email": "taylor@example.test",
-                "full_name": "Taylor Example",
-                "home": {
-                  "city": "San Francisco",
-                  "home_ownership": "owned_primary",
-                  "property_type": "single_family",
-                  "state": "CA",
-                  "street": "123 Main St",
-                  "zip": "94107"
-                }
-              }
-            }
-            JSON
-        - label: fetch
-          lang: JavaScript
-          source: |-
-            const payload = {
-              "credit_consent_pending": true,
-              "intake": {
-                "email": "taylor@example.test",
-                "full_name": "Taylor Example",
-                "home": {
-                  "city": "San Francisco",
-                  "home_ownership": "owned_primary",
-                  "property_type": "single_family",
-                  "state": "CA",
-                  "street": "123 Main St",
-                  "zip": "94107"
-                }
-              }
-            };
-
-            const response = await fetch("https://www.coveragecat.com/api/consumer/homeowners/prefill", {
-              method: "POST",
-              headers: {
-                "Coverage-Cat-API-Version": "v1",
-                "Idempotency-Key": "demo-post-api-consumer-homeowners-prefill",
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            console.log(data);
-        - label: requests
-          lang: Python
-          source: |-
-            import requests
-
-            payload = {
-                "credit_consent_pending": True,
-                "intake": {
-                "email": "taylor@example.test",
-                "full_name": "Taylor Example",
-                "home": {
-                "city": "San Francisco",
-                "home_ownership": "owned_primary",
-                "property_type": "single_family",
-                "state": "CA",
-                "street": "123 Main St",
-                "zip": "94107"
-            }
-            }
-            }
-
-            response = requests.post(
-                "https://www.coveragecat.com/api/consumer/homeowners/prefill",
-                headers={
-                    "Coverage-Cat-API-Version": "v1",
-                    "Idempotency-Key": "demo-post-api-consumer-homeowners-prefill",
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=30,
-            )
-
-            print(response.json())
-      x-coverage-cat-surface: consumer
-      x-openai-isConsequential: true
   /api/consumer/status:
     get:
       description: Returns non-PII public progress for a prior consumer handoff. Once quoted, `offer_summary` includes only quote count and premium highlights rather than direct session URLs.
@@ -7403,7 +5820,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}:
     patch:
-      description: 'Applies top-level intake edits for the consumer-prefill follow-up API. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Use this after gathering context-backed answers; for homeowners, recover core shopper and occupancy facts from user-controlled context first, then let Coverage Cat carry estimated home-editor fields into one final review card. After a homeowners application is submitted, this same patch route can answer messy carrier or shopper follow-up in-thread with `message_reply`; when `GET /api/intake/{uid}/issues` shows `conversation.reply_pending`, echo the answer here and pass `reply_to_message_id` from that conversation payload when Coverage Cat returned one. For umbrella, use the staged review turn to send the bundled shopper-owned details and any corrections, then set `confirm_submission: true` on that same final turn. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count`, never send `vehicles` rows on this pre-submit patch, and omit top-level `field_estimates` unless you are certain each field path matches a current umbrella review field. Until that final submit happens, say explicitly that the application is not submitted yet, ask for any remaining items in plain English, and present gathered details plus remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. If the staged review shows a wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you show the final review. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before you send them. Reserve a single human interruption for the final review-and-submit step, keep umbrella credit consent out of this turn, and keep offer selection and post-choose bind continuation on the dedicated `/select`, `/bind`, and `/attach` routes.'
+      description: 'Applies top-level intake edits for the consumer-prefill follow-up API. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Use this after gathering context-backed answers; For umbrella, use the staged review turn to send the bundled shopper-owned details and any corrections, then set `confirm_submission: true` on that same final turn. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count`, never send `vehicles` rows on this pre-submit patch, and omit top-level `field_estimates` unless you are certain each field path matches a current umbrella review field. Until that final submit happens, say explicitly that the application is not submitted yet, ask for any remaining items in plain English, and present gathered details plus remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. If the staged review shows a wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you show the final review. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before you send them. Reserve a single human interruption for the final review-and-submit step, keep umbrella credit consent out of this turn, and keep offer selection and post-choose bind continuation on the dedicated `/select`, `/bind`, and `/attach` routes.'
       operationId: patch_first_party_intake
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
@@ -7519,7 +5936,7 @@ paths:
               $ref: '#/components/headers/SkillVersion'
       security:
         - intake_access_token: []
-      summary: Patch and optionally submit a first-party homeowners or umbrella intake.
+      summary: Patch and optionally submit a first-party umbrella intake.
       x-codeSamples:
         - label: PATCH /api/intake/{uid}
           lang: cURL
@@ -7998,7 +6415,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}/bind:
     post:
-      description: "Use this only after the current direct-follow-up payload says bind can continue. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. For umbrella, use this after `needs_more_info_to_bind` or `ready_to_finalize`, then send only the current bind-stage `next_question` fields inside `intake`. For homeowners, use this only after select returns `ready_to_finalize`, then send `preview_token` plus `bind_confirmed: true` to start carrier bind follow-up. Homeowners quotes or carrier bind follow-up may take up to 48 hours, and any carrier payment or signing link will be sent directly to the customer's email on file rather than a first-party payment endpoint."
+      description: "Use this only after the current direct-follow-up payload says bind can continue. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. For umbrella, use this after `needs_more_info_to_bind` or `ready_to_finalize`, then send only the current bind-stage `next_question` fields inside `intake`."
       operationId: continue_consumer_bind
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
@@ -8016,7 +6433,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IntakeAssistantResponse'
-          description: Updated consumer homeowners or umbrella bind follow-up state.
+          description: Updated consumer umbrella bind follow-up state.
           headers:
             Coverage-Cat-API-Version:
               $ref: '#/components/headers/CoverageCatApiVersion'
@@ -8129,7 +6546,7 @@ paths:
               $ref: '#/components/headers/SkillVersion'
       security:
         - intake_access_token: []
-      summary: Continue the consumer homeowners or umbrella bind follow-up in chat.
+      summary: Continue the consumer umbrella bind follow-up in chat.
       x-codeSamples:
         - label: POST /api/intake/{uid}/bind
           lang: cURL
@@ -8195,7 +6612,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}/issues:
     get:
-      description: "Returns a line-aware follow-up payload for a consumer-prefill homeowners or umbrella intake uid. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Before submission, this exposes the one-time review checkpoint and any remaining missing or estimated values, and the agent should say explicitly that the application is not submitted yet before asking for anything else. Present gathered details, review facts, and remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. For homeowners, treat those missing fields as a behind-the-scenes enrichment backlog rather than a first-turn questionnaire, and keep recovering context-backed answers until the payload is ready for one review card. After submission, homeowners issue payloads can stay in `pending_quotes` or `waiting_on_carrier` for up to 48 hours; keep polling and use the returned notification-channel details to keep the registered customer email on file. When the homeowners carrier or chat thread needs another answer, Coverage Cat returns `conversation.messages`, `conversation.reply_pending`, and `conversation.reply_to_message_id` so the assistant can answer the follow-up in chat with the patch route instead of breaking out to delegated tools. Homeowners quoted offers include `selection_token`, the select step can return a `purchase_preview` plus `preview_token`, and any carrier payment or signing link will go directly to the customer's email on file rather than a first-party payment endpoint. For umbrella, Coverage Cat may keep `status: needs_more_info` while still returning a staged `review` preview plus a bundled `next_question` for the final shopper-owned review turn, so the assistant can collect details such as full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, net worth, and any corrections in one message rather than one field at a time. Once quotes are ready, `selection_guidance.same_reply_requirements` can preview small carrier-specific bind questions for a chosen offer so the shopper can answer those in the same selection reply instead of opening a second turn. If the staged review shows a wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you show the final review. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. If the shopper gives a birthday in MM-DD-YYYY form, normalize it to YYYY-MM-DD before the patch call. After submission, umbrella issue payloads expose quote progress, structured umbrella offers with `selection_token`, detailed post-choose umbrella states, payment_setup details once secure Stripe collection is prepared, and a refreshed `intake_access_token` for the next direct follow-up call. For Monoline and Markel, once declarations uploads are on file, `documents_pending_review` usually advances to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel."
+      description: "Returns a line-aware follow-up payload for a consumer-prefill umbrella intake uid. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Before submission, this exposes the one-time review checkpoint and any remaining missing or estimated values, and the agent should say explicitly that the application is not submitted yet before asking for anything else. Present gathered details, review facts, and remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. For umbrella, Coverage Cat may keep `status: needs_more_info` while still returning a staged `review` preview plus a bundled `next_question` for the final shopper-owned review turn, so the assistant can collect details such as full name, email, phone, full address, birthday, marital status, driver's license state, driver's license number, net worth, and any corrections in one message rather than one field at a time. Once quotes are ready, `selection_guidance.same_reply_requirements` can preview small carrier-specific bind questions for a chosen offer so the shopper can answer those in the same selection reply instead of opening a second turn. If the staged review shows a wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you show the final review. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. If the shopper gives a birthday in MM-DD-YYYY form, normalize it to YYYY-MM-DD before the patch call. After submission, umbrella issue payloads expose quote progress, structured umbrella offers with `selection_token`, detailed post-choose umbrella states, payment_setup details once secure Stripe collection is prepared, and a refreshed `intake_access_token` for the next direct follow-up call. For Monoline and Markel, once declarations uploads are on file, `documents_pending_review` usually advances to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel."
       operationId: get_first_party_intake_issues
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
@@ -8300,7 +6717,7 @@ paths:
               $ref: '#/components/headers/SkillVersion'
       security:
         - intake_access_token: []
-      summary: Read first-party assistant blockers or quote progress for a homeowners or umbrella intake.
+      summary: Read first-party assistant blockers or quote progress for a umbrella intake.
       x-codeSamples:
         - label: GET /api/intake/{uid}/issues
           lang: cURL
@@ -8693,7 +7110,7 @@ paths:
       x-openai-isConsequential: false
   /api/intake/{uid}/select:
     post:
-      description: "Use this only after `GET /api/intake/{uid}/issues` returns structured offers with `selection_token`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. For homeowners, this stages the selected offer for one final bind approval and returns `purchase_preview`, `preview_token`, carrier-direct payment guidance, and the registered notification channel; it does not collect payment and does not start carrier bind follow-up yet. For umbrella, Coverage Cat collects consumer-report authorization here, after the user chooses an offer. If an umbrella offer exposes `um_uim_selection`, send the shopper's include-or-decline choice here as `um_uim_election` on the first select call. If the umbrella quote payload exposed `selection_guidance.same_reply_requirements` for the chosen offer, send those answers under `intake` on this first select call so the shopper can finish selection in one reply. If Coverage Cat still returns `credit_consent_required` with a bind-stage `next_question`, ask for both the consumer-report authorization and those bind details in one shopper-facing turn, then retry this same endpoint with both `credit_consent` and the bind-stage answers under `intake`. Successful responses return detailed post-choose states rather than collapsing back into a coarse quoted bucket. For homeowners, any carrier payment or signing link will later be sent directly to the customer's email on file. For Monoline and Markel umbrella offers, once declarations uploads are on file, `documents_pending_review` usually transitions to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel."
+      description: "Use this only after `GET /api/intake/{uid}/issues` returns structured offers with `selection_token`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. For umbrella, Coverage Cat collects consumer-report authorization here, after the user chooses an offer. If an umbrella offer exposes `um_uim_selection`, send the shopper's include-or-decline choice here as `um_uim_election` on the first select call. If the umbrella quote payload exposed `selection_guidance.same_reply_requirements` for the chosen offer, send those answers under `intake` on this first select call so the shopper can finish selection in one reply. If Coverage Cat still returns `credit_consent_required` with a bind-stage `next_question`, ask for both the consumer-report authorization and those bind details in one shopper-facing turn, then retry this same endpoint with both `credit_consent` and the bind-stage answers under `intake`. Successful responses return detailed post-choose states rather than collapsing back into a coarse quoted bucket. For Monoline and Markel umbrella offers, once declarations uploads are on file, `documents_pending_review` usually transitions to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel."
       operationId: select_consumer_offer
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
@@ -8824,7 +7241,7 @@ paths:
               $ref: '#/components/headers/SkillVersion'
       security:
         - intake_access_token: []
-      summary: Select a quoted homeowners or umbrella offer on the consumer direct-follow-up path.
+      summary: Select a quoted umbrella offer on the consumer direct-follow-up path.
       x-codeSamples:
         - label: POST /api/intake/{uid}/select
           lang: cURL

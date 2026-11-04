@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-agent-tools
-description: "Use when an agent needs Coverage Cat's research-only insurance calculators or homeowners-agent finder instead of a purchase workflow. Do not use this skill when a shopper wants Coverage Cat to shop, quote, or buy insurance for them. Start with https://www.coveragecat.com/AGENTS.md, https://www.coveragecat.com/agents.txt, or https://www.coveragecat.com/.well-known/agents.txt, then use https://www.coveragecat.com/api/agent and the public developer portal at https://www.coveragecat.com/developers."
+description: "Use when an agent needs Coverage Cat's research-only insurance calculators instead of a purchase workflow. Do not use this skill when a shopper wants Coverage Cat to shop, quote, or buy insurance for them. Start with https://www.coveragecat.com/AGENTS.md, https://www.coveragecat.com/agents.txt, or https://www.coveragecat.com/.well-known/agents.txt, then use https://www.coveragecat.com/api/agent and the public developer portal at https://www.coveragecat.com/developers."
 ---
 
 # Coverage Cat Agent Tools
@@ -28,7 +28,6 @@ Use this skill for Coverage Cat's read-only research APIs and tool pages.
 - Auto insurance estimates
 - Collision and comprehensive coverage calculator
 - File-a-claim calculator
-- Homeowners agent finder
 
 ## Start here
 
@@ -42,6 +41,6 @@ The developer portal and human tool pages are fallback browser starts, not the p
 
 ## Do not use when
 
-- The user wants Coverage Cat to shop for, quote, or buy umbrella or homeowners insurance.
-- The user wants Coverage Cat to run a live delegated umbrella or homeowners workflow.
+- The user wants Coverage Cat to shop for, quote, or buy umbrella insurance.
+- The user wants Coverage Cat to run a live delegated umbrella workflow.
 - You need auth setup or sandbox instructions; use the dedicated developer docs and purchase skills.
