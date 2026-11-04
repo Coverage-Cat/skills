@@ -273,6 +273,107 @@ components:
         - disclosure_hash
         - presented_at
       type: object
+    InsurancePrivacyNotice:
+      additionalProperties: false
+      description: The exact current insurance privacy notice and application scope. Show the complete text and acknowledgment_text verbatim before collecting the shopper's receipt.
+      properties:
+        acknowledgment_text:
+          type: string
+        kind:
+          const: insurance_privacy_notice
+          type: string
+        notice_type:
+          enum:
+            - initial
+            - annual
+            - revised
+          type: string
+        operational_status:
+          const: active
+          type: string
+        product:
+          type: string
+        presentation_token:
+          type: string
+        state:
+          type: string
+        text:
+          type: string
+        text_hash:
+          pattern: '^[a-f0-9]{64}$'
+          type: string
+        url:
+          format: uri
+          type: string
+        version:
+          type: string
+      required:
+        - kind
+        - notice_type
+        - version
+        - text
+        - text_hash
+        - url
+        - state
+        - product
+        - operational_status
+        - acknowledgment_text
+      type: object
+    PrivacyNoticeAcknowledgment:
+      additionalProperties: false
+      description: The shopper's electronic-delivery agreement and affirmative acknowledgment after the complete returned insurance privacy notice and acknowledgment text are shown verbatim.
+      properties:
+        acknowledged:
+          const: true
+          type: boolean
+        collected_from_user:
+          const: true
+          type: boolean
+        disclosure_hash:
+          description: Exact text_hash from the returned insurance_privacy_notice artifact.
+          pattern: '^[a-f0-9]{64}$'
+          type: string
+        disclosure_product:
+          description: Exact product from the returned insurance_privacy_notice artifact.
+          type: string
+        disclosure_state:
+          description: Exact state from the returned insurance_privacy_notice artifact.
+          type: string
+        disclosure_version:
+          description: Exact version from the returned insurance_privacy_notice artifact.
+          type: string
+        electronic_delivery_agreed:
+          const: true
+          type: boolean
+        notice_type:
+          enum:
+            - initial
+            - annual
+            - revised
+          type: string
+        presentation_reference:
+          description: Optional opaque conversation or message reference; do not include message contents or personal information.
+          maxLength: 200
+          type: string
+        presented_at:
+          description: RFC 3339 timestamp from the assistant runtime for when the complete notice and acknowledgment text were shown.
+          format: date-time
+          type: string
+        shown_to_user:
+          const: true
+          type: boolean
+      required:
+        - notice_type
+        - acknowledged
+        - electronic_delivery_agreed
+        - shown_to_user
+        - collected_from_user
+        - disclosure_version
+        - disclosure_hash
+        - disclosure_state
+        - disclosure_product
+        - presented_at
+      type: object
     MonolineMvrConsentReceipt:
       additionalProperties: false
       description: Versioned real-user response to the selected Monoline offer's MVR and consumer-report authorization. Display the complete returned monoline_mvr_consent_disclosure.text and source_url before collecting the answer.
@@ -413,6 +514,10 @@ components:
       properties:
         credit_consent_disclosure:
           $ref: '#/components/schemas/ConsentDisclosure'
+        insurance_privacy_notice:
+          $ref: '#/components/schemas/InsurancePrivacyNotice'
+        privacy_notice_required:
+          type: boolean
         expires_at:
           description: When the returned consumer handoff credentials expire.
           format: date-time
@@ -1309,6 +1414,10 @@ components:
       additionalProperties: false
       description: REST consumer follow-up payload for the `/api/intake/{uid}` surface.
       properties:
+        insurance_privacy_notice:
+          $ref: '#/components/schemas/InsurancePrivacyNotice'
+        privacy_notice_required:
+          type: boolean
         field_estimates:
           items:
             additionalProperties: true
@@ -2267,6 +2376,10 @@ components:
           type: array
         credit_consent_disclosure:
           $ref: '#/components/schemas/ConsentDisclosure'
+        insurance_privacy_notice:
+          $ref: '#/components/schemas/InsurancePrivacyNotice'
+        privacy_notice_required:
+          type: boolean
         compare_details_url:
           format: uri
           type: string
@@ -2310,6 +2423,10 @@ components:
           type: array
         credit_consent_disclosure:
           $ref: '#/components/schemas/ConsentDisclosure'
+        insurance_privacy_notice:
+          $ref: '#/components/schemas/InsurancePrivacyNotice'
+        privacy_notice_required:
+          type: boolean
         field_estimates:
           items:
             $ref: '#/components/schemas/UmbrellaFieldEstimate'
@@ -2404,6 +2521,10 @@ components:
           type: array
         credit_consent_disclosure:
           $ref: '#/components/schemas/ConsentDisclosure'
+        insurance_privacy_notice:
+          $ref: '#/components/schemas/InsurancePrivacyNotice'
+        privacy_notice_required:
+          type: boolean
         credit_consent_question:
           description: |
             Present only as a short compatibility prompt when `status` is `credit_consent_required`. Display the complete `credit_consent_disclosure.text` verbatim, then pass the real user's answer and the returned disclosure version and hash back in a complete `credit_consent` receipt.
@@ -2747,6 +2868,10 @@ components:
           type: string
         credit_consent_disclosure:
           $ref: '#/components/schemas/ConsentDisclosure'
+        insurance_privacy_notice:
+          $ref: '#/components/schemas/InsurancePrivacyNotice'
+        privacy_notice_required:
+          type: boolean
         credit_consent_question:
           description: |
             Short compatibility prompt returned when Coverage Cat needs consumer-report authorization. Display the complete `credit_consent_disclosure.text` verbatim and send the complete versioned receipt rather than relying on this short prompt alone.
@@ -2834,6 +2959,8 @@ components:
       properties:
         credit_consent:
           $ref: '#/components/schemas/CreditConsentReceipt'
+        privacy_notice_acknowledgment:
+          $ref: '#/components/schemas/PrivacyNoticeAcknowledgment'
         review_confirmed:
           const: true
           type: boolean
@@ -2871,13 +2998,15 @@ components:
       type: object
     IntakeAssistantPatchRequest:
       additionalProperties: true
-      description: "Partial intake patch for the first-party assistant follow-up API. Send user-confirmed edits directly as top-level intake fields. Existing policyholders may send support correspondence with `message_reply` and an optional `reply_to_message_id`; the new homeowners purchase flow is temporarily under construction, so new applications and submissions remain unavailable. For umbrella intakes, top-level field_estimates[] rows may accompany inferred values when you are certain each field path matches a current umbrella review field. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count` and never send `vehicles` rows on this pre-submit patch. `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for I'm not sure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before sending them. Set confirm_submission: true on the final one-time review turn to submit and start quote generation."
+      description: "Partial intake patch for the first-party assistant follow-up API. Send user-confirmed edits directly as top-level intake fields. When `privacy_notice_required` is true, display the complete returned `insurance_privacy_notice.text` and `acknowledgment_text` verbatim, then return `privacy_notice_acknowledgment` with the shopper's electronic-delivery agreement and affirmative acknowledgment, the current RFC 3339 presentation time, and the notice's type, version, hash, state and product copied from the returned artifact. The acknowledgment may accompany this final submission call. Existing policyholders may send support correspondence with `message_reply` and an optional `reply_to_message_id`; the new homeowners purchase flow is temporarily under construction, so new applications and submissions remain unavailable. For umbrella intakes, top-level field_estimates[] rows may accompany inferred values when you are certain each field path matches a current umbrella review field. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count` and never send `vehicles` rows on this pre-submit patch. `current_auto_coverages` is a banded enum, not free text: send one of `unsure` for I'm not sure; `500k/1m` for $500k/$1 Million/$100k or higher; `500k/500k` for $500k/$500k/$100k or $500k CSL; `300k/300k` for $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` for $100k/$300k/$100k or lower. Coverage Cat rejects the shopper's raw limits, so translate them into the strongest band those limits fully satisfy. Underlying auto limits gate umbrella eligibility, so reserve `unsure` for limits the shopper genuinely does not know rather than using it to skip the translation. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before sending them. Set confirm_submission: true on the final one-time review turn to submit and start quote generation."
       properties:
         confirm_submission:
           description: 'Set to true on the single human review turn once the user has reviewed the umbrella application and wants Coverage Cat to submit now. Umbrella consumer-report authorization for insurance underwriting is collected later at select.'
           type: boolean
         credit_consent:
           $ref: '#/components/schemas/CreditConsentReceipt'
+        privacy_notice_acknowledgment:
+          $ref: '#/components/schemas/PrivacyNoticeAcknowledgment'
         current_auto_coverages:
           description: "Which band the shopper's current underlying auto liability limits fall into: `500k/1m` covers $500k/$1 Million/$100k or higher; `500k/500k` covers $500k/$500k/$100k or $500k CSL; `300k/300k` covers $250k/$500k/$100k or $300k/$300k/$100k or $300k CSL; `100k/300k` covers $100k/$300k/$100k or lower. Pick the strongest band the shopper's actual limits fully satisfy. Underlying auto limits gate umbrella eligibility, so use `unsure` only when the shopper genuinely does not know their limits."
           enum:
@@ -4893,7 +5022,7 @@ paths:
   /api/agent/umbrella/draft:
     post:
       description: |
-        Use this endpoint as the primary operator-side enrichment loop. Search allowed context sources first and send the fullest application you can, including `field_estimates` metadata for inferred values. If `status` is `needs_more_info`, keep working behind the scenes with `pending_fields`, `suggested_values`, and `next_question`; do not turn that state into a user questionnaire unless your product intentionally falls back to one. If you exhaust approved context and still cannot reach `ready_for_review`, stop and escalate rather than silently presenting a partial review page. If `status` is `ready_for_review`, render the formatted `review` JSON with `field_estimates` paths marked with `*`, include the short note `* = estimated` once above and once below the review list, and do not prefix every estimated line with `[Estimated]`. Preliminary umbrella quotes do not require credit consent; Coverage Cat collects the consumer-report authorization at `select`. Set `sandbox: true` only on the first create call when you want mocked delegated umbrella test data instead of live customer email or carrier traffic.
+        Use this endpoint as the primary operator-side enrichment loop. Search allowed context sources first and send the fullest application you can, including `field_estimates` metadata for inferred values. If `status` is `needs_more_info`, keep working behind the scenes with `pending_fields`, `suggested_values`, and `next_question`; do not turn that state into a user questionnaire unless your product intentionally falls back to one. If you exhaust approved context and still cannot reach `ready_for_review`, stop and escalate rather than silently presenting a partial review page. If `status` is `ready_for_review`, render the formatted `review` JSON with `field_estimates` paths marked with `*`, include the short note `* = estimated` once above and once below the review list, and do not prefix every estimated line with `[Estimated]`. When `insurance_privacy_notice` is present, show its complete `text` and `acknowledgment_text` verbatim during that final review and collect the shopper's electronic-delivery agreement and affirmative acknowledgment for the `quotes` receipt. Preliminary umbrella quotes do not require credit consent; Coverage Cat collects the consumer-report authorization at `select`. Set `sandbox: true` only on the first create call when you want mocked delegated umbrella test data instead of live customer email or carrier traffic.
       operationId: prepare_delegated_umbrella_application
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -5080,7 +5209,7 @@ paths:
   /api/agent/umbrella/quotes:
     post:
       description: |
-        Only call this after the user has reviewed the latest review JSON and approved or corrected any estimated values. Preliminary umbrella quotes do not require credit consent; Coverage Cat collects the consumer-report authorization at `select`. If the review token is stale or the application changed, go back to the draft step and obtain a fresh review token. Once a session has moved into bind or post-select checkout, do not replay an old review token through this endpoint. Sandbox sessions return mocked quote data and stop at the `status` endpoint rather than continuing into select/bind.
+        Only call this after the user has reviewed the latest review JSON and approved or corrected any estimated values. If the ready-for-review response included `insurance_privacy_notice`, show its complete `text` and `acknowledgment_text` verbatim, collect the shopper's electronic-delivery agreement and affirmative acknowledgment, and include `privacy_notice_acknowledgment` on this call with the current presentation time and the exact type, version, hash, state and product from the returned artifact. Preliminary umbrella quotes do not require credit consent; Coverage Cat collects the consumer-report authorization at `select`. If the review token is stale or the application changed, go back to the draft step and obtain a fresh review token. Once a session has moved into bind or post-select checkout, do not replay an old review token through this endpoint. Sandbox sessions return mocked quote data and stop at the `status` endpoint rather than continuing into select/bind.
       operationId: quote_delegated_umbrella_application
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -6062,7 +6191,7 @@ paths:
       x-openai-isConsequential: true
   /api/intake/{uid}:
     patch:
-      description: 'Applies top-level intake edits for the consumer-prefill follow-up API. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Use this after gathering context-backed answers; For umbrella, use the staged review turn to send the bundled shopper-owned details and any corrections, then set `confirm_submission: true` on that same final turn. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count`, never send `vehicles` rows on this pre-submit patch, and omit top-level `field_estimates` unless you are certain each field path matches a current umbrella review field. Until that final submit happens, say explicitly that the application is not submitted yet, ask for any remaining items in plain English, and present gathered details plus remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. If the staged review shows a wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you show the final review. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before you send them. Reserve a single human interruption for the final review-and-submit step, keep umbrella credit consent out of this turn, and keep offer selection and post-choose bind continuation on the dedicated `/select`, `/bind`, and `/attach` routes.'
+      description: 'Applies top-level intake edits for the consumer-prefill follow-up API. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. Use this after gathering context-backed answers; For umbrella, use the staged review turn to send the bundled shopper-owned details and any corrections, then set `confirm_submission: true` on that same final turn. When `privacy_notice_required` is true, show the complete returned `insurance_privacy_notice.text` and `acknowledgment_text` verbatim and include `privacy_notice_acknowledgment` with the shopper''s electronic-delivery agreement, affirmative acknowledgment, current presentation time, and exact notice type, version, hash, state and product on that same final patch. Use canonical umbrella count corrections such as `umbrella_details.motorized_vehicle_count`, never send `vehicles` rows on this pre-submit patch, and omit top-level `field_estimates` unless you are certain each field path matches a current umbrella review field. Until that final submit happens, say explicitly that the application is not submitted yet, ask for any remaining items in plain English, and present gathered details plus remaining items as short labeled bullets or sections rather than a prose paragraph. If any shown value is estimated, mark each estimated bullet label or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`. If the staged review shows a wrong estimated umbrella count from context, patch the canonical `umbrella_details.*` count field before you show the final review. Coverage Cat will not resume or expose a prior consumer umbrella draft based on email alone. Continue an existing consumer draft only through the issued `uid` plus the current hidden MCP session or latest `intake_access_token` handoff. Normalize shopper birthdays from MM-DD-YYYY to YYYY-MM-DD before you send them. Reserve a single human interruption for the final review-and-submit step, keep umbrella credit consent out of this turn, and keep offer selection and post-choose bind continuation on the dedicated `/select`, `/bind`, and `/attach` routes.'
       operationId: patch_first_party_intake
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
