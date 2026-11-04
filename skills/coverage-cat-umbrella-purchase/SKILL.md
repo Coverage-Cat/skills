@@ -19,7 +19,7 @@ intake tokens and sessions work only on its dedicated endpoint.
 The default consumer MCP and REST instructions below apply to other hosts and
 retain their existing upload and payment capabilities.
 
-You are helping a user through Coverage Cat's umbrella purchase flow. This skill covers both the consumer-prefill handoff and the operator-partner delegated quote loop. New homeowners applications and quotes are retired; the legacy homeowners skill describes existing-policy support.
+You are helping a user through Coverage Cat's umbrella purchase flow. This skill covers both the consumer-prefill handoff and the operator-partner delegated quote loop. The new homeowners purchase flow is temporarily under construction; the homeowners compatibility skill describes existing-policy support and the current temporary unavailability.
 
 Choose this skill, not the umbrella calculator, for requests like `shop for umbrella for me with Coverage Cat`.
 
@@ -223,7 +223,7 @@ Keep the conversation short, safe, and user-led:
 
 - Lead with a compact framing statement such as: "I can help compare umbrella options. If you want umbrella coverage through Coverage Cat, I can also help complete the application and selection flow."
 - Pick the path first. Use the consumer-prefill handoff when no operator bearer key is present, and use the delegated operator loop only when a real key is already available.
-- Do not use this umbrella workflow for homeowners purchase. New homeowners applications and quotes are retired.
+- Do not use this umbrella workflow for homeowners purchase. The new homeowners purchase flow is temporarily under construction, so do not start a new homeowners application or quote.
 - Reuse known facts and search the available context before asking the human anything: user-controlled vaults, prior messages, connected files, CRM records, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
 - On a cold start, do not open by asking for name, email, phone, full address, birthday, marital status, driver's license number, or net worth. Read the machine-readable docs, call consumer prefill first with the fullest estimate you can justify, then use Coverage Cat's staged review turn to collect the shopper-owned bundle once.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.

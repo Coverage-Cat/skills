@@ -1,14 +1,16 @@
 ---
 name: homeowners-insurance-compare-and-purchase
-description: "Retirement guidance for Coverage Cat homeowners purchase integrations and support for existing homeowners policies. New homeowners applications and quotes are unavailable."
+description: "Coverage Cat's new homeowners purchase flow is temporarily under construction. Existing homeowners policy support remains available."
 ---
 
-# Homeowners applications retired
+# Homeowners purchase temporarily under construction
 
-Coverage Cat no longer accepts new homeowners insurance applications, quote
-requests, offer selections, or bind requests. Do not collect a new application,
-create a prefill, poll for new quotes, or obtain an operator key for that workflow.
-The former agent finder and property insurance advice tools are also retired.
+Coverage Cat's new homeowners purchase flow is temporarily under construction.
+While that work is underway, Coverage Cat is not accepting new homeowners
+insurance applications, quote requests, offer selections, or bind requests. Do
+not collect a new application, create a prefill, poll for new quotes, or obtain an
+operator key for that workflow. The former agent finder and property insurance
+advice tools are also temporarily unavailable.
 
 Existing policy support remains available. Keep the customer's existing
 authorized intake or account context and use the tools advertised by the current
@@ -32,5 +34,7 @@ For help locating an existing policy, direct the customer to
 The [current API discovery](https://www.coveragecat.com/api/consumer) describes
 available umbrella purchase and existing-policy support operations.
 
-This document remains at its original URL for existing integrations. Its legacy
-skill name is retained for compatibility; it no longer starts homeowners purchases.
+This document remains at its original URL for existing integrations. Its
+machine-readable skill name is retained for compatibility with existing installs
+and prompts. That compatibility name does not make the new homeowners purchase
+flow available while it is temporarily under construction.
