@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-homeowners-purchase
-description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two homeowners paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated loop that fills the application from approved CRM, loan, prior-session, email, or policy context, gets one review plus soft-credit consent, submits, then checks for quotes."
+description: "Use whether you're a consumer's own AI agent or a partner operator. This skill covers two homeowners paths: a consumer-prefill handoff that assembles one review-and-consent page from the user's own context, and an operator-partner delegated loop that fills the application from approved CRM, loan, prior-session, email, or policy context, gets one review plus consumer-report authorization, submits, then checks for quotes."
 ---
 
 # Coverage Cat Homeowners Purchase Skill
@@ -78,7 +78,7 @@ This skill supports two different jobs. Pick one path first, because the consume
 3. As soon as you have a structured address, search the user's own context first, then defensible property sources such as property records, Zillow, and Realtor.com, to assemble the fullest intake you can before review.
 4. Before you call Coverage Cat, recover the core non-estimable profile and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether this is owner-occupied or a new purchase. Coverage Cat can estimate many reviewable home fields, but it does not infer every top-level shopper fact from an address alone, and if current-policy expiration is still missing you should carry it into review as an estimated value two months from today instead of turning it into a standalone second-turn question.
 5. Call `POST /api/consumer/homeowners/prefill` with the fullest `intake` you can assemble, any matching `field_estimates`, and `credit_consent_pending: true`.
-6. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Show one review card from `review_summary`, with the soft-credit consent prompt first and the prefilled application below it. Start that message by saying explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. Render the gathered details and any remaining action items as clearly separated labeled bullets or sections rather than a prose paragraph. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
+6. Keep the returned `uid`, `intake_access_token`, and `polling_token`. Show one review card from `review_summary`, with the consumer-report authorization prompt first and the prefilled application below it. Start that message by saying explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet. Render the gathered details and any remaining action items as clearly separated labeled bullets or sections rather than a prose paragraph. When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 7. If your runtime can continue in chat, call `GET /api/intake/:uid/issues` with `Authorization: Bearer <intake_access_token>` and keep the browser closed for as long as Coverage Cat is still returning structured review or quote data.
 8. Use `resume_url` only as the browser fallback when your runtime cannot continue in chat or the user explicitly wants Coverage Cat's UI on `/intake?resume=...`.
 9. Optionally poll `GET /api/consumer/status?token=...` with the returned `polling_token` for coarse non-PII progress and quote highlights after the handoff.
@@ -130,7 +130,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 5. Missing `policy_expire` should not block the one-time review turn. If it is still unknown, keep the second turn as the full review and submission request and carry an estimated `policy_expire` value two months from today into that review.
 6. Keep `needs_more_info` behind the scenes when you can. The intended UX is a single review-and-consent handoff, not a long questionnaire.
 7. On every pre-submit user-facing turn, explicitly say the application is not submitted yet and Coverage Cat has not received a submitted application yet.
-8. Collect soft-credit authorization only from the complete returned `credit_consent_disclosure.text`; return the homeowner's answer and the matching version, hash, `shown_to_user: true`, and `collected_from_user: true` in top-level `credit_consent`. A raw boolean or generic prior consent is insufficient.
+8. Collect consumer-report authorization only from the complete returned `credit_consent_disclosure.text`; return the homeowner's answer and the matching version, hash, `shown_to_user: true`, and `collected_from_user: true` in top-level `credit_consent`. A raw boolean or generic prior consent is insufficient.
 9. After the successful initial submit, expect `pending_quotes` and keep the quote wait asynchronous by polling the same `uid` or using the homeowners dashboard APIs.
 10. On the consumer-operated path, once offers are ready, summarize them clearly, use `homeowners_consumer_select`/`POST /api/intake/:uid/select`, then confirm the returned preview and use `homeowners_consumer_bind`/`POST /api/intake/:uid/bind`. If `consumer_intake_issues` later returns `conversation.reply_pending`, keep the messy carrier follow-up in the same chat loop with `consumer_intake_patch` and `message_reply`. Coverage Cat still cannot collect first-party homeowners payment in chat, so any carrier payment or signing link must go directly to the customer's email on file.
 11. If any response includes `sandbox: true`, treat every offer, status, and link as mocked test data and do not forward it to a real homeowner.
@@ -144,7 +144,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - Once you have a structured address, search user-controlled context, property records, Zillow, and Realtor.com before you ask for date of birth, marital status, new_purchase, or mortgage details.
 - Recover date of birth, marital status, and owner-occupied/new-purchase facts from the user's own context before you rely on Coverage Cat's estimated review card. Coverage Cat estimates many home-editor fields, but the first payload still needs enough home_ownership/property_type data to preserve standard-homeowners vs condo vs landlord intent.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.
-- Coverage Cat can enrich many reviewable home fields once it has a structured address. Prefer one completed estimated review card plus soft-credit consent over a long collection loop.
+- Coverage Cat can enrich many reviewable home fields once it has a structured address. Prefer one completed estimated review card plus consumer-report authorization over a long collection loop.
 - On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
 - When you list gathered details, estimated answers, or remaining items for the homeowner, use short labeled bullets or sections rather than a prose paragraph.
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
@@ -294,7 +294,7 @@ Example complete follow-up call after Coverage Cat returned the disclosure and t
     "shown_to_user": true,
     "collected_from_user": true,
     "disclosure_version": "2026-11-04",
-    "disclosure_hash": "59464285b604e3f2a0d76e93552766c9db9ab4f969f198412b52494298b1b370"
+    "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
   },
   "intake": {
     "full_name": "Taylor Home",

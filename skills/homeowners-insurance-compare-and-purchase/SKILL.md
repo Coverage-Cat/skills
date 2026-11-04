@@ -71,7 +71,7 @@ Keep the shopper on the machine-readable MCP or REST loop until Coverage Cat ret
 - When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
 - For dropdown-like homeowners fields such as home ownership / occupancy and property type, numbered options are fine and the number alone as shorthand is acceptable.
 - Keep the review output split into clearly labeled applicant details, property details, estimated structure details, estimated systems details, and other sections so the review does not blur together.
-- Use `POST /api/consumer/homeowners/prefill` plus one review card and soft-credit consent when you do not have an operator bearer key.
+- Use `POST /api/consumer/homeowners/prefill` plus one review card and consumer-report authorization when you do not have an operator bearer key.
 - When the default consumer MCP is available, use the consumer-operated subset named above instead of switching to delegated homeowners tools without operator auth.
 - Once homeowners offers are ready on the consumer-operated path, use `homeowners_consumer_select` or `POST /api/intake/:uid/select`, then confirm the returned preview and use `homeowners_consumer_bind` or `POST /api/intake/:uid/bind`. If `consumer_intake_issues` later returns `conversation.reply_pending`, keep that messy carrier or shopper follow-up in the same chat loop with `consumer_intake_patch` and `message_reply`.
 - Homeowners quotes or carrier bind follow-up may take up to 48 hours. Keep polling and keep the registered customer email channel on file because any insurer payment or signing link must be sent directly to the customer's email on file.
