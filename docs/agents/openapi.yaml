@@ -209,6 +209,14 @@ components:
       properties:
         kind:
           type: string
+        source_updated_at:
+          description: Displayed update date for a carrier-specific source disclosure, when present.
+          format: date
+          type: string
+        source_url:
+          description: Carrier disclosure source URL that must be shown with carrier-specific text, when present.
+          format: uri
+          type: string
         text:
           description: Complete disclosure text that must be presented verbatim before the shopper answers.
           type: string
@@ -265,6 +273,47 @@ components:
         - disclosure_hash
         - presented_at
       type: object
+    MonolineMvrConsentReceipt:
+      additionalProperties: false
+      description: Versioned real-user response to the selected Monoline offer's MVR and consumer-report authorization. Display the complete returned monoline_mvr_consent_disclosure.text and source_url before collecting the answer.
+      properties:
+        answer:
+          description: The shopper's own answer after the complete carrier-specific disclosure and source URL were shown.
+          enum:
+            - 'Yes'
+            - 'No'
+            - Revoke
+          type: string
+        collected_from_user:
+          const: true
+          description: Attests that the shopper personally answered rather than the agent assuming consent.
+          type: boolean
+        disclosure_hash:
+          description: Exact text_hash from the returned monoline_mvr_consent_disclosure.
+          type: string
+        disclosure_version:
+          description: Exact version from the returned monoline_mvr_consent_disclosure.
+          type: string
+        presentation_reference:
+          description: Optional opaque conversation or message reference; do not include message contents or personal information.
+          maxLength: 200
+          type: string
+        presented_at:
+          description: RFC 3339 timestamp from the assistant runtime for when the complete disclosure and source URL were shown.
+          format: date-time
+          type: string
+        shown_to_user:
+          const: true
+          description: Attests that the complete returned disclosure text and source URL were presented before the shopper answered.
+          type: boolean
+      required:
+        - answer
+        - collected_from_user
+        - shown_to_user
+        - disclosure_version
+        - disclosure_hash
+        - presented_at
+      type: object
     ConsumerUmbrellaSelectRequest:
       additionalProperties: false
       properties:
@@ -274,6 +323,8 @@ components:
           additionalProperties: true
           description: Optional bind-stage answers for the current next_question. Use this when Coverage Cat asked for consumer-report authorization and bind details in the same shopper-facing turn, so you can retry select with both the consent and the answers together.
           type: object
+        monoline_mvr_consent:
+          $ref: '#/components/schemas/MonolineMvrConsentReceipt'
         selection_confirmed:
           const: true
           type: boolean
@@ -2296,6 +2347,12 @@ components:
       properties:
         credit_consent:
           $ref: '#/components/schemas/CreditConsentReceipt'
+        intake:
+          additionalProperties: true
+          description: Bind-stage answers for the current next_question, including answers collected in the same shopper turn as required consent.
+          type: object
+        monoline_mvr_consent:
+          $ref: '#/components/schemas/MonolineMvrConsentReceipt'
         sandbox:
           description: |
             Optional sticky sandbox flag. Sandbox delegated umbrella sessions currently reject `select` with `sandbox_unsupported`; this field is accepted so a client carrying the same request envelope does not fail schema validation first.
@@ -2305,6 +2362,21 @@ components:
           type: boolean
         selection_token:
           type: string
+        um_uim_election:
+          description: The shopper's choice for an offered $1M excess UM/UIM option.
+          oneOf:
+            - type: boolean
+            - enum:
+                - include
+                - decline
+              type: string
+            - additionalProperties: false
+              properties:
+                elected:
+                  type: boolean
+              required:
+                - elected
+              type: object
         uid:
           type: string
       required:
@@ -2323,6 +2395,13 @@ components:
         credit_consent_question:
           description: |
             Present only as a short compatibility prompt when `status` is `credit_consent_required`. Display the complete `credit_consent_disclosure.text` verbatim, then pass the real user's answer and the returned disclosure version and hash back in a complete `credit_consent` receipt.
+          type: string
+        monoline_mvr_consent_disclosure:
+          allOf:
+            - $ref: '#/components/schemas/ConsentDisclosure'
+          description: Complete Monoline-specific MVR and consumer-report authorization. Show its text and source_url before collecting the separate receipt.
+        monoline_mvr_consent_question:
+          description: Compatibility prompt returned when the selected Monoline offer still needs its separate authorization. Display the complete disclosure text and source URL instead of this short prompt alone.
           type: string
         next_question:
           $ref: '#/components/schemas/NextQuestion'
@@ -2351,6 +2430,7 @@ components:
         status:
           enum:
             - credit_consent_required
+            - monoline_mvr_consent_required
             - needs_more_info_to_bind
             - documents_needed
             - documents_pending_review
@@ -5068,9 +5148,9 @@ paths:
   /api/agent/umbrella/select:
     post:
       description: |
-        Pass the selected `selection_token`, a final user confirmation, and the `credit_consent` block collected from the real user. Coverage Cat requires the affirmative Yes to the consumer-report authorization before binding a chosen offer; if it is missing or declined the response is `credit_consent_required` with the prompt to render. Otherwise Coverage Cat will either return the next bind-stage `next_question` to keep collecting required details in chat, or it will continue the standard post-choose workflow and tell the agent to keep polling `status` in chat. For Monoline and Markel, the post-choose workflow may require declarations uploads first; once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel. Successful post-choose responses include `offers_url`, and may include `required_upload_types` or a secure `payment_url`. Sandbox delegated umbrella sessions reject this endpoint with `sandbox_unsupported`.
+        Pass the selected `selection_token`, `selection_confirmed: true`, and the `credit_consent` block collected from the real user. Coverage Cat requires the affirmative Yes to the consumer-report authorization before binding a chosen offer; if it is missing or declined the response is `credit_consent_required` with the complete disclosure to render. A selected Monoline offer also requires a separate `monoline_mvr_consent`: show the complete returned carrier-specific disclosure and its source URL, collect the shopper's separate answer, and send both receipts in the same retry. If a consent-required response also returns `next_question`, collect those details in the same shopper turn and send them under `intake`. Send `um_uim_election` when the chosen offer exposes that option. Otherwise Coverage Cat will either return the next bind-stage question or continue the standard post-choose workflow and tell the agent to keep polling `status` in chat. For Monoline and Markel, the post-choose workflow may require declarations uploads first; once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel. Successful post-choose responses include `offers_url`, and may include `required_upload_types` or a secure `payment_url`. Sandbox delegated umbrella sessions reject this endpoint with `sandbox_unsupported`.
 
-        Set `credit_consent.presented_at` to the actual current RFC 3339 time when the complete disclosure was shown. Coverage Cat accepts it only within the prior 24 hours and no more than five minutes in the future.
+        Set each consent receipt's `presented_at` to the actual current RFC 3339 time when its complete disclosure was shown. Coverage Cat accepts it only within the prior 24 hours and no more than five minutes in the future.
       operationId: select_delegated_umbrella_offer
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -5200,7 +5280,7 @@ paths:
               $ref: '#/components/headers/SkillVersion'
       security:
         - agent_api_key: []
-      summary: Confirm the user's selection, capture credit consent, and start the chat-native bind continuation flow.
+      summary: Confirm the user's selection, capture required consumer-report authorizations, and start the chat-native bind continuation flow.
       x-codeSamples:
         - label: POST /api/agent/umbrella/select
           lang: cURL
@@ -5220,7 +5300,20 @@ paths:
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
+              "intake": {
+                "birthday": "1990-01-01"
+              },
+              "monoline_mvr_consent": {
+                "answer": "Yes",
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
+                "disclosure_version": "coverage-cat-monoline-mvr-2026-11-04",
+                "disclosure_hash": "818555a20d8d4f2cacc87dc0629f739b888a6ebd24ae4edd6b9755f6bed3cd74"
+              },
+              "selection_confirmed": true,
               "selection_token": "sel_demo",
+              "um_uim_election": "include",
               "uid": "umbrella-req-123"
             }
             JSON
@@ -5236,7 +5329,20 @@ paths:
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
+              "intake": {
+                "birthday": "1990-01-01"
+              },
+              "monoline_mvr_consent": {
+                "answer": "Yes",
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
+                "disclosure_version": "coverage-cat-monoline-mvr-2026-11-04",
+                "disclosure_hash": "818555a20d8d4f2cacc87dc0629f739b888a6ebd24ae4edd6b9755f6bed3cd74"
+              },
+              "selection_confirmed": true,
               "selection_token": "sel_demo",
+              "um_uim_election": "include",
               "uid": "umbrella-req-123"
             };
 
@@ -5265,8 +5371,21 @@ paths:
                 "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
-            },
+                },
+                "intake": {
+                    "birthday": "1990-01-01"
+                },
+                "monoline_mvr_consent": {
+                    "answer": "Yes",
+                    "shown_to_user": True,
+                    "collected_from_user": True,
+                    "presented_at": "2026-11-04T20:15:00Z",
+                    "disclosure_version": "coverage-cat-monoline-mvr-2026-11-04",
+                    "disclosure_hash": "818555a20d8d4f2cacc87dc0629f739b888a6ebd24ae4edd6b9755f6bed3cd74"
+                },
+                "selection_confirmed": True,
                 "selection_token": "sel_demo",
+                "um_uim_election": "include",
                 "uid": "umbrella-req-123"
             }
 
@@ -7110,7 +7229,7 @@ paths:
       x-openai-isConsequential: false
   /api/intake/{uid}/select:
     post:
-      description: "Use this only after `GET /api/intake/{uid}/issues` returns structured offers with `selection_token`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. For umbrella, Coverage Cat collects consumer-report authorization here, after the user chooses an offer. If an umbrella offer exposes `um_uim_selection`, send the shopper's include-or-decline choice here as `um_uim_election` on the first select call. If the umbrella quote payload exposed `selection_guidance.same_reply_requirements` for the chosen offer, send those answers under `intake` on this first select call so the shopper can finish selection in one reply. If Coverage Cat still returns `credit_consent_required` with a bind-stage `next_question`, ask for both the consumer-report authorization and those bind details in one shopper-facing turn, then retry this same endpoint with both `credit_consent` and the bind-stage answers under `intake`. Successful responses return detailed post-choose states rather than collapsing back into a coarse quoted bucket. For Monoline and Markel umbrella offers, once declarations uploads are on file, `documents_pending_review` usually transitions to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel."
+      description: "Use this only after `GET /api/intake/{uid}/issues` returns structured offers with `selection_token`. Authenticate with `Authorization: Bearer <intake_access_token>` from the latest consumer-prefill follow-up response. For umbrella, Coverage Cat collects consumer-report authorization here, after the user chooses an offer. A selected Monoline offer also requires a separate versioned MVR authorization: show the complete returned carrier-specific text and source URL, collect the shopper's separate answer, and send `credit_consent` plus `monoline_mvr_consent` in the same retry. If an umbrella offer exposes `um_uim_selection`, send the shopper's include-or-decline choice here as `um_uim_election` on the first select call. If the umbrella quote payload exposed `selection_guidance.same_reply_requirements` for the chosen offer, send those answers under `intake` on this first select call so the shopper can finish selection in one reply. If Coverage Cat returns a consent-required state with a bind-stage `next_question`, ask for all returned authorizations and bind details in one shopper-facing turn, then retry this same endpoint with the receipts and bind-stage answers under `intake`. Successful responses return detailed post-choose states rather than collapsing back into a coarse quoted bucket. For Monoline and Markel umbrella offers, once declarations uploads are on file, `documents_pending_review` usually transitions to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel."
       operationId: select_consumer_offer
       parameters:
         - $ref: '#/components/parameters/IntakeUid'
@@ -7261,8 +7380,20 @@ paths:
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
+              "intake": {
+                "birthday": "1990-01-01"
+              },
+              "monoline_mvr_consent": {
+                "answer": "Yes",
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
+                "disclosure_version": "coverage-cat-monoline-mvr-2026-11-04",
+                "disclosure_hash": "818555a20d8d4f2cacc87dc0629f739b888a6ebd24ae4edd6b9755f6bed3cd74"
+              },
               "selection_confirmed": true,
-              "selection_token": "sel_demo"
+              "selection_token": "sel_demo",
+              "um_uim_election": "include"
             }
             JSON
         - label: fetch
@@ -7277,8 +7408,20 @@ paths:
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
+              "intake": {
+                "birthday": "1990-01-01"
+              },
+              "monoline_mvr_consent": {
+                "answer": "Yes",
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
+                "disclosure_version": "coverage-cat-monoline-mvr-2026-11-04",
+                "disclosure_hash": "818555a20d8d4f2cacc87dc0629f739b888a6ebd24ae4edd6b9755f6bed3cd74"
+              },
               "selection_confirmed": true,
-              "selection_token": "sel_demo"
+              "selection_token": "sel_demo",
+              "um_uim_election": "include"
             };
 
             const response = await fetch("https://www.coveragecat.com/api/intake/consumer-intake-123/select", {
@@ -7306,9 +7449,21 @@ paths:
                 "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
-            },
+                },
+                "intake": {
+                    "birthday": "1990-01-01"
+                },
+                "monoline_mvr_consent": {
+                    "answer": "Yes",
+                    "shown_to_user": True,
+                    "collected_from_user": True,
+                    "presented_at": "2026-11-04T20:15:00Z",
+                    "disclosure_version": "coverage-cat-monoline-mvr-2026-11-04",
+                    "disclosure_hash": "818555a20d8d4f2cacc87dc0629f739b888a6ebd24ae4edd6b9755f6bed3cd74"
+                },
                 "selection_confirmed": True,
-                "selection_token": "sel_demo"
+                "selection_token": "sel_demo",
+                "um_uim_election": "include"
             }
 
             response = requests.post(
