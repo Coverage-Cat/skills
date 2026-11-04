@@ -4,15 +4,14 @@
   "groupings": [
     {
       "title": "Coverage Cat Purchase Workflows",
-      "description": "Consumer-prefill or delegated umbrella and homeowners purchase flows.",
+      "description": "Consumer-prefill or delegated umbrella purchase flows.",
       "skills": [
-        "coverage-cat-umbrella-purchase",
-        "coverage-cat-homeowners-purchase"
+        "coverage-cat-umbrella-purchase"
       ]
     },
     {
       "title": "Coverage Cat Insurance Tools",
-      "description": "Read-only insurance calculators and the homeowners-agent finder.",
+      "description": "Read-only insurance calculators.",
       "skills": [
         "coverage-cat-agent-tools"
       ]

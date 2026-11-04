@@ -1,6 +1,6 @@
 ---
 name: coverage-cat-umbrella-purchase
-description: "Use when a shopper wants Coverage Cat to shop for, compare, quote, or buy personal umbrella insurance, or continue an existing umbrella purchase. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review page from the user's own context, keeps quote review and post-choose follow-up in chat through the direct intake API when possible, and returns preliminary quotes without upfront credit consent, and an operator-partner delegated quote and bind loop that collects credit consent at selection. It also lists the read-only calculator and finder endpoints as separate, non-purchase tools."
+description: "Use when a shopper wants Coverage Cat to shop for, compare, quote, or buy personal umbrella insurance, or continue an existing umbrella purchase. This skill covers two umbrella paths: a consumer-prefill handoff that assembles one review page from the user's own context, keeps quote review and post-choose follow-up in chat through the direct intake API when possible, and returns preliminary quotes without upfront credit consent, and an operator-partner delegated quote and bind loop that collects credit consent at selection. It also lists the read-only calculator endpoints as separate, non-purchase tools."
 ---
 
 # Coverage Cat Umbrella Purchase Skill
@@ -19,7 +19,7 @@ intake tokens and sessions work only on its dedicated endpoint.
 The default consumer MCP and REST instructions below apply to other hosts and
 retain their existing upload and payment capabilities.
 
-You are helping a user through Coverage Cat's umbrella purchase flow. This skill covers both the consumer-prefill handoff and the operator-partner delegated quote loop. Use the separate homeowners purchase skill for homeowners quoting.
+You are helping a user through Coverage Cat's umbrella purchase flow. This skill covers both the consumer-prefill handoff and the operator-partner delegated quote loop. New homeowners applications and quotes are retired; the legacy homeowners skill describes existing-policy support.
 
 Choose this skill, not the umbrella calculator, for requests like `shop for umbrella for me with Coverage Cat`.
 
@@ -75,16 +75,15 @@ This skill supports two different jobs. Pick one path first, because the consume
 4. Use the operator-partner path only when you have a real Coverage Cat operator bearer key and approved back-office context you can use to prefill the application.
 5. Do not mix the two paths in one session. Path 1 starts with an unauthenticated prefill call, then prefers the hidden MCP session when you stay on the default consumer MCP. If your host cannot preserve that session state, retry the same MCP follow-up tools with the returned `intake_access_token`, or use that same token on the shopper REST follow-up API when your runtime falls back to direct HTTP. Path 2 uses the delegated operator API.
 
-Coverage Cat also exposes read-only calculator and finder APIs. These are information tools, not purchase flows:
+Coverage Cat also exposes read-only calculator APIs. These are information tools, not purchase flows:
 
 - `POST /api/agent/calculators/home`
 - `POST /api/agent/calculators/umbrella`
 - `POST /api/agent/calculators/auto-estimates`
 - `POST /api/agent/calculators/collision-and-comprehensive-coverage`
 - `POST /api/agent/calculators/file-a-claim`
-- `POST /api/agent/tools/homeowners-agents/search`
 
-Use these endpoints when the user asks for estimates, claim/coverage modeling, or licensed homeowners agents. Do not route umbrella shopping or buying requests here. They are rate limited more tightly than the purchase API, so cache the answer in the conversation and do not poll them repeatedly with the same inputs.
+Use these endpoints when the user asks for estimates or claim/coverage modeling. Do not route umbrella shopping or buying requests here. They are rate limited more tightly than the purchase API, so cache the answer in the conversation and do not poll them repeatedly with the same inputs.
 
 ## Golden Paths
 
@@ -176,7 +175,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 
 ### Read-only modeling tools
 
-1. Use the calculator and finder endpoints when the user wants estimates, claim math, or agent search, not a delegated umbrella purchase.
+1. Use the calculator endpoints when the user wants estimates or claim math, not a delegated umbrella purchase.
 2. Cache the result in the conversation because these tools are rate limited more tightly than the purchase APIs.
 3. Do not open a delegated purchase session unless the user wants Coverage Cat to quote or continue a live umbrella application.
 
@@ -223,9 +222,9 @@ Keep the conversation short, safe, and user-led:
 
 ## Conversation Rules
 
-- Lead with a compact framing statement such as: "I can help compare home and umbrella options. If you want umbrella coverage through Coverage Cat, I can also help complete the application and selection flow."
+- Lead with a compact framing statement such as: "I can help compare umbrella options. If you want umbrella coverage through Coverage Cat, I can also help complete the application and selection flow."
 - Pick the path first. Use the consumer-prefill handoff when no operator bearer key is present, and use the delegated operator loop only when a real key is already available.
-- Do not use this umbrella workflow for homeowners purchase. Use the dedicated homeowners purchase skill instead.
+- Do not use this umbrella workflow for homeowners purchase. New homeowners applications and quotes are retired.
 - Reuse known facts and search the available context before asking the human anything: user-controlled vaults, prior messages, connected files, CRM records, prior Coverage Cat sessions, email threads, document drives, and OCR'd policy documents.
 - On a cold start, do not open by asking for name, email, phone, full address, birthday, marital status, driver's license number, or net worth. Read the machine-readable docs, call consumer prefill first with the fullest estimate you can justify, then use Coverage Cat's staged review turn to collect the shopper-owned bundle once.
 - Do not re-ask fields already present in `known_summary` unless the user wants to change them.

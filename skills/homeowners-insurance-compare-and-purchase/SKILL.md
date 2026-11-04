@@ -1,83 +1,36 @@
 ---
 name: homeowners-insurance-compare-and-purchase
-description: "Discoverability alias for Coverage Cat's homeowners purchase skill. Use whether you're a consumer's own AI agent or a partner operator: start with the consumer-prefill handoff when no operator bearer key is available, or use the delegated homeowners flow when one is."
+description: "Retirement guidance for Coverage Cat homeowners purchase integrations and support for existing homeowners policies. New homeowners applications and quotes are unavailable."
 ---
 
-# Homeowners Insurance Compare And Purchase
+# Homeowners applications retired
 
-## ChatGPT app
+Coverage Cat no longer accepts new homeowners insurance applications, quote
+requests, offer selections, or bind requests. Do not collect a new application,
+create a prefill, poll for new quotes, or obtain an operator key for that workflow.
+The former agent finder and property insurance advice tools are also retired.
 
-For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
-Use the tools advertised by that endpoint to prepare the application, obtain the
-shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
-or `payment_url` as a link: the shopper completes document uploads and final
-checkout on Coverage Cat's website. Afterward, read status or the policy tool.
-Do not open or complete checkout for the shopper, collect card details in chat,
-or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
-intake tokens and sessions work only on its dedicated endpoint.
+Existing policy support remains available. Keep the customer's existing
+authorized intake or account context and use the tools advertised by the current
+connection. On the default consumer MCP, use `consumer_intake_issues`,
+`homeowners_consumer_policy`, and `homeowners_consumer_service` for status,
+recorded policy documents, and support requests. Do not start a replacement
+application to recover an existing policy. For an existing-policy support
+conversation, `consumer_intake_patch` can send `message_reply` and the optional
+`reply_to_message_id` returned in `conversation.messages`. Its REST equivalent
+is `PATCH /api/intake/{uid}` with the existing intake access token. This reply
+does not submit a new homeowners application.
 
-The default consumer MCP and REST instructions below apply to other hosts and
-retain their existing upload and payment capabilities.
+The REST equivalents are `GET /api/intake/{uid}/issues`,
+`GET /api/intake/{uid}/policy`, and `POST /api/intake/{uid}/service`, authenticated
+with the existing intake access token. Preview a support request first and send
+`confirm_request: true` only after the customer approves it. A request does not
+itself confirm a cancellation, refund, or coverage change.
 
-This alias mirrors Coverage Cat's canonical `coverage-cat-homeowners-purchase` skill.
+For help locating an existing policy, direct the customer to
+[Coverage Cat support](https://www.coveragecat.com/contact).
+The [current API discovery](https://www.coveragecat.com/api/consumer) describes
+available umbrella purchase and existing-policy support operations.
 
-Use it when a shopper wants their own AI agent to gather context before a Coverage Cat handoff, or when a partner-operator agent needs Coverage Cat to run the delegated homeowners quote loop.
-
-## Start Here
-
-Start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`; those files route agents to Coverage Cat's MCP, REST, markdown, and browser-fallback resources. Do not drive the browser UI unless Coverage Cat should take over the shopper-facing flow.
-Keep the shopper on the machine-readable MCP or REST loop until Coverage Cat returns `resume_url` or you intentionally hand the browser over to Coverage Cat. `/intake` and Coverage Cat's consumer portal are fallback browser starts, not the preferred purchase entrypoints.
-
-1. If your runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the visible Coverage Cat entrypoint. Treat it as optional routing: keep the live shopper loop on Coverage Cat's consumer MCP or consumer REST surfaces after discovery, and do not force MCP-native or direct-REST runtimes onto PACT.
-2. If your runtime supports MCP, default to Coverage Cat's no-OAuth consumer MCP. Register `/.well-known/mcp.json` in manifest-aware hosts, or configure `https://www.coveragecat.com/api/consumer/mcp` as the direct transport URL for local Codex. Default consumer-operated homeowners runs to the consumer MCP subset: `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, `homeowners_consumer_select`, `homeowners_consumer_bind`, `homeowners_consumer_policy`, and `homeowners_consumer_service`. If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
-
-   Ask the question on its own line exactly as:
-
-   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
-
-   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-3. Fetch `GET /api/consumer`.
-4. Fetch `GET /api/consumer/openapi.yaml` or `GET /api/consumer/openapi.json`.
-5. Read `GET /api/agent/homeowners/skill.md`.
-5. Read `/ai/skills/homeowners/setup` if you need the delegated operator path.
-
-## Choose The Path
-
-1. Use the consumer-prefill path when there is no operator key or the shopper wants their own AI agent to assemble the application from user-controlled context before the handoff.
-2. On the default consumer MCP, stay on that same consumer-operated subset through review, long-lag quote polling, `homeowners_consumer_select`, `homeowners_consumer_bind`, and later policy/support follow-up. When `consumer_intake_issues` returns `conversation.reply_pending`, answer that insurer or shopper follow-up in the same loop with `consumer_intake_patch` and `message_reply`. Coverage Cat does not collect first-party homeowners payment in chat, and any carrier payment or signing link goes directly to the customer's email on file. Quotes or carrier bind follow-up may take up to 48 hours, so keep polling and keep that registered customer email channel on file. `GET https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected because the direct transport uses `POST` JSON-RPC, and `/.well-known/mcp.json` is discovery metadata rather than the transport endpoint.
-3. Use the delegated operator MCP or delegated homeowners API only when you already have a real operator bearer key or an OAuth-capable host that can complete delegated auth.
-4. Do not ask a personal shopper for a Coverage Cat operator API key or delegated OAuth just to run the consumer-prefill path.
-5. Use the delegated operator path only when you have a real Coverage Cat operator bearer key and approved back-office context to prefill the application.
-6. If your runtime cannot prefill, fall back to the direct browser handoff at `/intake`.
-7. Do not mix the consumer-prefill and delegated paths in one session.
-
-## Delegated Homeowners Loop
-
-- `POST /api/agent/homeowners/quotes`
-- `GET /api/agent/homeowners/dashboard`
-- `POST /api/agent/homeowners/dashboard/session`
-- `POST /api/agent/homeowners/fix-issues-email`
-- For browser access, open `operator_dashboard_url` from a delegated homeowners response when you want the operator view for one intake, or call `POST /api/agent/homeowners/dashboard/session` and open the returned `dashboard_url`. The `GET /api/agent/homeowners/dashboard` endpoint is the JSON status API.
-
-## Guardrails
-
-- On a cold start, ask only for the user's full name, email, property address, and whether the property should be treated as standard homeowners, condo, or landlord coverage. Then search the user's own context, property records, Zillow, and Realtor.com before asking anything else.
-- On the first delegated `POST /api/agent/homeowners/quotes` create call, each `intake.home[]` row must already classify the line: `property_type: condo` for condo coverage, `home_ownership: owned_rental` or a rented `rental_status` for landlord coverage, or both a non-rental `home_ownership` and a non-condo `property_type` for standard homeowners. Coverage Cat rejects the initial create call if that classifier is missing.
-- Before you call Coverage Cat, recover core shopper and occupancy facts your runtime can defensibly find from user-controlled context, especially date of birth, marital status, and whether the home is owner-occupied or a new purchase.
-- Do not open with a date-of-birth or marital-status questionnaire when the consumer-prefill handoff can already carry an estimated review card.
-- Do not break the second turn into a standalone current-policy-expiration question. Keep current-policy expiration in the review turn as an estimated value two months from today when needed.
-- On every pre-submit user-facing turn, say explicitly that the application is not submitted yet and Coverage Cat has not received a submitted application yet.
-- When you list gathered details, estimated answers, or remaining items for the homeowner, use short labeled bullets or sections rather than a prose paragraph.
-- When any shown value is estimated, mark that bullet or value with `*`, include the short note `* = estimated` once above and once below the list, and do not prefix every estimated line with `[Estimated]`.
-- For dropdown-like homeowners fields such as home ownership / occupancy and property type, numbered options are fine and the number alone as shorthand is acceptable.
-- Keep the review output split into clearly labeled applicant details, property details, estimated structure details, estimated systems details, and other sections so the review does not blur together.
-- Use `POST /api/consumer/homeowners/prefill` plus one review card and consumer-report authorization when you do not have an operator bearer key.
-- When the default consumer MCP is available, use the consumer-operated subset named above instead of switching to delegated homeowners tools without operator auth.
-- Once homeowners offers are ready on the consumer-operated path, use `homeowners_consumer_select` or `POST /api/intake/:uid/select`, then confirm the returned preview and use `homeowners_consumer_bind` or `POST /api/intake/:uid/bind`. If `consumer_intake_issues` later returns `conversation.reply_pending`, keep that messy carrier or shopper follow-up in the same chat loop with `consumer_intake_patch` and `message_reply`.
-- Homeowners quotes or carrier bind follow-up may take up to 48 hours. Keep polling and keep the registered customer email channel on file because any insurer payment or signing link must be sent directly to the customer's email on file.
-- Reuse the same `uid` for the delegated session.
-- Use `sandbox: true` only on the first delegated create call when rehearsing.
-- When Coverage Cat returns `credit_consent_disclosure`, display its complete `text` verbatim and return top-level `credit_consent` with the homeowner's `answer`, `shown_to_user: true`, `collected_from_user: true`, actual current RFC 3339 `presented_at` time, and `disclosure_version` / `disclosure_hash` copied from its `version` / `text_hash`. Capture `presented_at` when you render the disclosure. Coverage Cat accepts it only within the prior 24 hours and no more than five minutes in the future. A raw authorization boolean is not consent evidence.
-- When Coverage Cat returns `contact_preferences_disclosures`, any service-text or service-call choice is optional. Show the applicable complete text and return the homeowner's Yes, No or Revoke answer as a versioned top-level `contact_preferences.service_sms` or `service_call` receipt with its own actual current `presented_at` time; the same 24-hour/5-minute limits apply. Do not send legacy intake consent flags.
-- For the field-by-field API contract, use `GET /api/agent/openapi.yaml`; for a live intake's actual required fields, trust the returned `schema` and `missing_fields[].enum`. Most reviewable `intake.home[]` values may be estimated with matching `field_estimates`, but never guess dwelling replacement cost and do not send lender-only `note_rate`, `term_months`, or escrow flags.
-- Expect `202 Accepted` / `pending_quotes` semantics for long-running delegated quote work and keep polling asynchronous.
+This document remains at its original URL for existing integrations. Its legacy
+skill name is retained for compatibility; it no longer starts homeowners purchases.

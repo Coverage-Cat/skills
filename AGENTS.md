@@ -38,8 +38,7 @@ Start here:
 Use these skills when:
 
 - `umbrella-insurance-compare-and-purchase`: the shopper wants Coverage Cat to shop for, quote, compare, or buy umbrella insurance for them; use the consumer-prefill umbrella handoff or delegated umbrella quoting, review, selection, attach, or bind continuation.
-- `homeowners-insurance-compare-and-purchase`: consumer-prefill homeowners handoff with direct `/api/intake/:uid` follow-up when available, `/intake` browser fallback, or operator-authenticated delegated homeowners quoting.
-- `insurance-tools`: research-only calculators or the homeowners-agent finder, not live shopping or purchase.
+- `insurance-tools`: research-only calculators, not live shopping or purchase.
 
 Legacy compatibility names remain available for existing installs:
 
@@ -58,10 +57,10 @@ Guardrails:
   Would you like to install the Coverage Cat MCP (recommended) or use the REST/CLI tools instead?
 
   Only share `/.well-known/mcp.json` after the user chooses MCP or asks for setup details.
-- For consumer-operated agents on that default consumer MCP, stay on the consumer purchase subset: `umbrella_consumer_prefill`, `homeowners_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, `umbrella_consumer_service`, `homeowners_consumer_select`, `homeowners_consumer_bind`, `homeowners_consumer_policy`, and `homeowners_consumer_service`.
+- For consumer-operated agents on that default consumer MCP, stay on the consumer purchase subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, `umbrella_consumer_service`, `homeowners_consumer_policy`, and `homeowners_consumer_service`.
 - The umbrella consumer subset can stay on the no-operator path through quote review, declarations upload, `payment_needed`, secure payment UI when available, `payment_url` fallback, bound-policy retrieval, and shopper-approved policy-support previews or requests. Do not switch to delegated umbrella tools just to reach checkout or aftercare.
 - Use those shopper surfaces only for insurance purchase and policy support. Coverage Cat records connector origin and permitted purpose on these handoffs, and connector data must stay out of unrelated advertising or model-training loops.
-- Homeowners consumer agents should stay on the no-operator subset through review, long-lag quote polling, `homeowners_consumer_select`, `homeowners_consumer_bind`, and later policy/support follow-up. When `consumer_intake_issues` returns `conversation.reply_pending`, answer that insurer or shopper follow-up in the same loop with `consumer_intake_patch` and `message_reply`. Coverage Cat does not collect first-party homeowners payment in chat; carrier payment or signing links go directly to the customer's email on file, and quotes or carrier bind follow-up may take up to 48 hours.
+- Existing homeowners policies retain status, policy-document, and support access. New homeowners applications and quotes are retired; use the current discovery document and do not start a replacement application.
 - Use `https://www.coveragecat.com/api/consumer` and `https://www.coveragecat.com/api/consumer/openapi.yaml` for personal shopper flows. Use `/api/agent` and `/api/agent/openapi.yaml` only when delegated operator auth or read-only tool APIs are intentionally in scope.
 - `GET` on `https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected; direct MCP transport uses `POST` JSON-RPC. Do not use `/.well-known/mcp.json` as the direct transport URL.
 - If a local Codex OAuth flow for `https://www.coveragecat.com/api/agent/mcp` fails because the host rejects the local callback URL, keep shopper flows on the consumer MCP and use the delegated operator MCP only from a bearer-token setup or an OAuth host whose callback policy is already compatible.
