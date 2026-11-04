@@ -343,7 +343,7 @@ components:
       type: object
     CreditConsentReceipt:
       additionalProperties: false
-      description: Versioned real-user consent receipt. Display the complete returned credit_consent_disclosure.text verbatim before collecting the answer; a raw authorization boolean is not evidence.
+      description: Versioned real-user consent receipt. Display the complete returned credit_consent_disclosure.text verbatim before collecting the answer, and record the actual current presentation time; a raw authorization boolean is not evidence.
       properties:
         answer:
           description: The shopper's own answer after the complete returned disclosure was shown.
@@ -366,6 +366,10 @@ components:
           description: Optional opaque conversation or message reference; do not include message contents or personal information.
           maxLength: 200
           type: string
+        presented_at:
+          description: RFC 3339 timestamp from the assistant runtime for when the complete disclosure was shown. Use the actual current presentation time; Coverage Cat accepts a timestamp within the prior 24 hours and no more than five minutes in the future.
+          format: date-time
+          type: string
         shown_to_user:
           const: true
           description: Attests that the complete returned disclosure text was presented verbatim before the shopper answered.
@@ -376,6 +380,7 @@ components:
         - shown_to_user
         - disclosure_version
         - disclosure_hash
+        - presented_at
       type: object
     ConsumerUmbrellaSelectRequest:
       additionalProperties: false
@@ -3211,6 +3216,8 @@ info:
 
     Delegated-agent APIs for Coverage Cat purchase workflows and read-only insurance tools. Umbrella delegated purchase is a one-review-page flow: the operator-side agent fills the application from allowed context, Coverage Cat returns estimated-field metadata, and the human only reviews or corrects the final JSON before preliminary quotes are generated. Credit consent is collected after the user chooses an offer, at the `select` step, before Coverage Cat can bind. Homeowners delegated purchase is a near-single-endpoint operator flow: gather the fullest approved-context application first, mark non-user-confirmed home values with `field_estimates`, then show the complete returned `credit_consent_disclosure.text` verbatim during the homeowner's review and submit a top-level `credit_consent` receipt containing the homeowner's answer, both display and collection attestations, and the exact returned disclosure version and hash. A raw authorization boolean is not consent evidence. Coverage Cat then submits and quotes the intake asynchronously and routes the homeowner back through portal review for any remaining estimated home answers before final bind. Coverage Cat also exposes public consumer handoff endpoints at `/api/consumer/umbrella/prefill`, `/api/consumer/homeowners/prefill`, `/api/consumer/status`, and the direct follow-up intake endpoints under `/api/intake/{uid}`. On the direct follow-up path, authenticate with the latest rotated `intake_access_token`, use `PATCH /api/intake/{uid}` only for pre-submit review, correction, and submission, and continue umbrella post-choose follow-up through `/api/intake/{uid}/select`, `/api/intake/{uid}/bind`, and `/api/intake/{uid}/attach`.
 
+    Every credit-consent or optional service-contact receipt must include `presented_at`: the actual current RFC 3339 date-time when the complete corresponding disclosure text was shown. Coverage Cat accepts a presentation time within the prior 24 hours and no more than five minutes in the future.
+
     Versioning: send the optional `Coverage-Cat-API-Version: v1` header to pin the stable agent API contract explicitly.
 
     Coverage Cat keeps `v1` as the current stable agent API version by default. If a future version supersedes it, Coverage Cat will announce the change in the developer portal and emit `Deprecation` and `Sunset` headers on the retiring version for at least 90 days before removal.
@@ -4608,6 +4615,8 @@ paths:
     post:
       description: |
         Use this endpoint as the primary operator-side enrichment loop for delegated homeowners purchase. Omit `uid` to create a new intake. Reuse the returned `uid` on every follow-up call. Start with the fullest intake patch you can assemble from approved operator-side context, and for any non-user-confirmed home value include matching `intake.home[].field_estimates` metadata. Keep credit consent out of the nested `intake`. During the homeowner's review, display the complete returned `credit_consent_disclosure.text` verbatim and resend the same `uid` with a top-level `credit_consent` receipt containing the homeowner's answer, `shown_to_user: true`, `collected_from_user: true`, and `disclosure_version` / `disclosure_hash` copied exactly from the returned disclosure's `version` / `text_hash`. A raw authorization boolean is insufficient. Do not break the intended second turn into a standalone current-policy-expiration question; if `policy_expire` is the remaining review gap, Coverage Cat can carry an estimated `policy_expire` value two months from today into that same review step. If `status` is `needs_more_info`, keep filling the returned `missing_fields` behind the scenes from your own systems first and only escalate to the human after approved context is exhausted. When Coverage Cat returns `homeowner_fix_issues_request_login_url`, share that safe sign-in request page if you want the homeowner to complete the remaining items in Coverage Cat's GUI. If `status` is `pending_quotes`, poll this same endpoint with the same `uid`. If `status` is `quoted`, summarize the returned offers and optionally share `homeowner_quotes_request_login_url`, where the homeowner can request their own login link before reviewing any unconfirmed estimated home answers and finishing bind in Coverage Cat's consumer portal. Set `sandbox: true` only on the first create call when you want mocked delegated homeowners test data instead of live customer email or carrier traffic.
+
+        Set `presented_at` to the actual current RFC 3339 time when the complete disclosure was shown. Coverage Cat accepts it only within the prior 24 hours and no more than five minutes in the future.
       operationId: quote_delegated_homeowners_application
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -6459,6 +6468,8 @@ paths:
     post:
       description: |
         Pass the selected `selection_token`, a final user confirmation, and the `credit_consent` block collected from the real user. Coverage Cat requires the affirmative Yes to the consumer-report authorization before binding a chosen offer; if it is missing or declined the response is `credit_consent_required` with the prompt to render. Otherwise Coverage Cat will either return the next bind-stage `next_question` to keep collecting required details in chat, or it will continue the standard post-choose workflow and tell the agent to keep polling `status` in chat. For Monoline and Markel, the post-choose workflow may require declarations uploads first; once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with a secure `payment_url` within about 5-10 minutes while declarations verification continues in parallel. Successful post-choose responses include `offers_url`, and may include `required_upload_types` or a secure `payment_url`. Sandbox delegated umbrella sessions reject this endpoint with `sandbox_unsupported`.
+
+        Set `credit_consent.presented_at` to the actual current RFC 3339 time when the complete disclosure was shown. Coverage Cat accepts it only within the prior 24 hours and no more than five minutes in the future.
       operationId: select_delegated_umbrella_offer
       parameters:
         - $ref: '#/components/parameters/CoverageCatApiVersion'
@@ -6604,6 +6615,7 @@ paths:
                 "answer": "Yes",
                 "shown_to_user": true,
                 "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
@@ -6619,6 +6631,7 @@ paths:
                 "answer": "Yes",
                 "shown_to_user": true,
                 "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
@@ -6648,6 +6661,7 @@ paths:
                 "answer": "Yes",
                 "shown_to_user": True,
                 "collected_from_user": True,
+                "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
             },
@@ -8826,6 +8840,7 @@ paths:
                 "answer": "Yes",
                 "shown_to_user": true,
                 "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
@@ -8841,6 +8856,7 @@ paths:
                 "answer": "Yes",
                 "shown_to_user": true,
                 "collected_from_user": true,
+                "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
               },
@@ -8870,6 +8886,7 @@ paths:
                 "answer": "Yes",
                 "shown_to_user": True,
                 "collected_from_user": True,
+                "presented_at": "2026-11-04T20:15:00Z",
                 "disclosure_version": "2026-11-04",
                 "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
             },
