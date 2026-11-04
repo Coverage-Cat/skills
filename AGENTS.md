@@ -38,9 +38,13 @@ Start here:
 Use these skills when:
 
 - `umbrella-insurance-compare-and-purchase`: the shopper wants Coverage Cat to shop for, quote, compare, or buy umbrella insurance for them; use the consumer-prefill umbrella handoff or delegated umbrella quoting, review, selection, attach, or bind continuation.
+- `homeowners-insurance-compare-and-purchase`: the shopper needs support for an existing Coverage Cat homeowners policy; the new homeowners purchase flow is temporarily under construction.
 - `insurance-tools`: research-only calculators, not live shopping or purchase.
 
-Legacy compatibility names remain available for existing installs:
+Legacy machine identifiers remain available so existing installs and prompts keep
+resolving. `coverage-cat-homeowners-purchase` is a compatibility name for
+existing-policy support; it does not make the new purchase flow available while
+that flow is temporarily under construction:
 
 - `coverage-cat-umbrella-purchase`
 - `coverage-cat-homeowners-purchase`
@@ -60,7 +64,7 @@ Guardrails:
 - For consumer-operated agents on that default consumer MCP, stay on the consumer purchase subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, `umbrella_consumer_payment`, `umbrella_consumer_policy`, `umbrella_consumer_service`, `homeowners_consumer_policy`, and `homeowners_consumer_service`.
 - The umbrella consumer subset can stay on the no-operator path through quote review, declarations upload, `payment_needed`, secure payment UI when available, `payment_url` fallback, bound-policy retrieval, and shopper-approved policy-support previews or requests. Do not switch to delegated umbrella tools just to reach checkout or aftercare.
 - Use those shopper surfaces only for insurance purchase and policy support. Coverage Cat records connector origin and permitted purpose on these handoffs, and connector data must stay out of unrelated advertising or model-training loops.
-- Existing homeowners policies retain status, policy-document, and support access. New homeowners applications and quotes are retired; use the current discovery document and do not start a replacement application.
+- Existing homeowners policies retain status, policy-document, and support access. The new homeowners purchase flow is temporarily under construction; use the current discovery document and do not start a new or replacement application while it is unavailable.
 - Use `https://www.coveragecat.com/api/consumer` and `https://www.coveragecat.com/api/consumer/openapi.yaml` for personal shopper flows. Use `/api/agent` and `/api/agent/openapi.yaml` only when delegated operator auth or read-only tool APIs are intentionally in scope.
 - `GET` on `https://www.coveragecat.com/api/consumer/mcp` returning `405 Method Not Allowed` is expected; direct MCP transport uses `POST` JSON-RPC. Do not use `/.well-known/mcp.json` as the direct transport URL.
 - If a local Codex OAuth flow for `https://www.coveragecat.com/api/agent/mcp` fails because the host rejects the local callback URL, keep shopper flows on the consumer MCP and use the delegated operator MCP only from a bearer-token setup or an OAuth host whose callback policy is already compatible.

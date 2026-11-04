@@ -1,4 +1,4 @@
 interface:
   display_name: "Coverage Cat Homeowners Policy Support"
-  short_description: "Existing-policy support; new quotes retired"
+  short_description: "Existing-policy support; purchase temporarily under construction"
   default_prompt: "Use $coverage-cat-homeowners-purchase to find support for an existing Coverage Cat homeowners policy."

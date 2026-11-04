@@ -31,12 +31,15 @@ npx skills add Coverage-Cat/skills --skill umbrella-insurance-compare-and-purcha
 ## Available skills
 
 - `umbrella-insurance-compare-and-purchase`
-- `homeowners-insurance-compare-and-purchase`
+- `homeowners-insurance-compare-and-purchase` — existing-policy support while the new homeowners purchase flow is temporarily under construction
 - `insurance-tools`
 
 ## Legacy compatibility skill names
 
-These remain available for existing installs and prompts:
+These machine identifiers remain available so existing installs and prompts keep
+resolving. `coverage-cat-homeowners-purchase` therefore remains present even
+though it cannot start a new homeowners purchase while the flow is temporarily
+under construction:
 
 - `coverage-cat-umbrella-purchase`
 - `coverage-cat-homeowners-purchase`
@@ -67,7 +70,7 @@ These remain available for existing installs and prompts:
 - For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`.
 - Stay on the consumer purchase subset: `umbrella_consumer_prefill`, `consumer_intake_issues`, `consumer_intake_patch`, plus `umbrella_consumer_select`, `umbrella_consumer_bind`, `umbrella_consumer_attach`, and `umbrella_consumer_payment` for umbrella post-quote follow-up.
 - The umbrella consumer subset can stay on the no-operator path through `payment_needed`, secure payment UI when available, and `payment_url`; do not switch to delegated tools just to reach checkout.
-- Existing homeowners policies retain status, policy-document, and support access. New homeowners applications and quotes are retired; use the current discovery document and do not start a replacement application.
+- Existing homeowners policies retain status, policy-document, and support access. The new homeowners purchase flow is temporarily under construction; use the current discovery document and do not start a new or replacement application while it is unavailable.
 - Use `https://www.coveragecat.com/api/consumer` and `https://www.coveragecat.com/api/consumer/openapi.yaml` for personal shopper flows. Use `/api/agent` and `/api/agent/openapi.yaml` only when delegated operator auth or read-only tool APIs are intentionally in scope.
 - Use `https://www.coveragecat.com/api/agent/mcp` only for delegated operator workflows that already have bearer auth or OAuth support.
 - If local Codex delegated OAuth fails because the host rejects the local callback URL, keep shopper flows on the consumer MCP and use the delegated operator MCP only from a bearer-token setup or an OAuth host whose callback policy is already compatible.
