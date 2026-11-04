@@ -363,6 +363,7 @@ If the response is `quoted`:
   - Always include: `Reply with the offer you want by carrier + coverage or row number.`
   - When any shown offer has `minimum_auto_limits`, include: `In that same reply, confirm your auto policy already meets the Min. auto limits shown for the offer you pick, or say it needs to be raised first.`
   - Always include: `If you're ready to buy, include Yes to authorize Coverage Cat's consumer-report check in that same reply.`
+  - When a shown offer is Monoline, include: `If you pick Monoline, Coverage Cat will also show a separate carrier MVR authorization and source link for your own Yes or No before continuing.`
   - When any shown offer is Monoline or Markel, include: `If you pick Monoline or Markel, upload current auto and home declarations pages (PDF or photo) after selection so Coverage Cat can prepare secure checkout.`
 - After the checklist, if any shown offer is Monoline or Markel, add a separate note such as `Timing note: secure checkout is usually ready within about 5-10 minutes after Coverage Cat receives those uploads.`
 - Use `selection_guidance` to explain the suggested default choice.
@@ -388,6 +389,8 @@ After the user chooses an offer and confirms that choice, call `POST /api/agent/
 - `credit_consent.presented_at` set to the actual current RFC 3339 time when you showed the complete disclosure
 - `credit_consent.disclosure_version` copied from `credit_consent_disclosure.version`
 - `credit_consent.disclosure_hash` copied from `credit_consent_disclosure.text_hash`
+- `um_uim_election` when the selected offer exposes an excess UM/UIM option and the shopper included or declined it
+- `intake` with only the returned bind-stage or `selection_guidance.same_reply_requirements` answers the shopper supplied in this same reply
 
 Rules for the consent block:
 
@@ -396,12 +399,15 @@ Rules for the consent block:
 - The consent answer must come from the real user, not from you. This is the consumer-report authorization that carriers require to bind the selected offer.
 - Only proceed on an explicit `Yes`. If the user says anything else, stop and explain that Coverage Cat cannot bind an offer without the consumer-report authorization.
 - If Coverage Cat returns `credit_consent_required` because consent was not sent or was declined, render the complete returned disclosure for the real user. If `next_question` is also present, ask for the consent and every listed bind detail in the same shopper-facing turn, then retry `select` with the same `selection_token`, the complete versioned consent receipt, and those `intake` answers.
+- If the selected offer is Monoline and Coverage Cat returns `monoline_mvr_consent_required`, display the complete `monoline_mvr_consent_disclosure.text` and its `source_url`. Collect the shopper's separate Yes or No without answering for them. Retry `select` with the same token, `selection_confirmed: true`, the generic `credit_consent` receipt, and a `monoline_mvr_consent` receipt containing the returned version/hash and the actual presentation time.
+- When either consent-required response also contains `next_question`, ask for every consent and listed detail in one shopper-facing turn, then send the receipts and an `intake` patch together on the retry.
 
 Do not call this step for delegated sandbox sessions. Delegated sandbox umbrella currently stops at mocked `quotes` and `status`.
 
 Handle the response like this:
 
 - `credit_consent_required`: if `next_question` is absent, display `credit_consent_disclosure.text` verbatim and retry `select` with the same `selection_token` plus the complete versioned consent receipt. If `next_question` is present, ask for consent and every listed bind detail in the same shopper-facing turn, then retry `select` with the receipt and those `intake` answers.
+- `monoline_mvr_consent_required`: display the complete carrier-specific disclosure text and source URL, collect the shopper's separate answer, and retry `select` with the complete `monoline_mvr_consent` receipt. Include the generic receipt and any `intake` answers collected in the same turn.
 - `needs_more_info_to_bind`: keep the user in chat. Ask only the fields in `next_question`, and also offer `offers_url` so the user can finish that same step inside Coverage Cat's GUI if they prefer. Then call the bind endpoint.
 - `documents_needed`: Coverage Cat accepted the selection and now needs the user's current home and auto declarations before it can finish processing the offer and prepare secure checkout. Upload them through `attach` if you already have them in context, or use `attach-upload` when your runtime already has the file on disk and can stream raw bytes directly. Otherwise, ask the user to share them, and also offer `offers_url` so they can complete the upload in Coverage Cat's GUI if that is easier.
 - `documents_pending_review`: Coverage Cat has the declarations on file and is processing the chosen offer with the insurer now. The direct insurer checkout price and secure checkout page are usually ready within about 5-10 minutes while final declarations verification continues. Poll `status`.
