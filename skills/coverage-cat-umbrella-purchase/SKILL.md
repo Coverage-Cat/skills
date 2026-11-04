@@ -354,6 +354,7 @@ If the response is `pending_quotes`:
 If the response is `quoted`:
 
 - Lead with `response_summary`.
+- When the response includes `credit_consent_disclosure`, display its complete `text` verbatim before showing the `**Next steps to purchase:**` checklist or asking the shopper for an answer. Do not summarize it or substitute `credit_consent_question` alone.
 - Render offers as a **single markdown table** with these columns in this order: `Carrier | Coverage limit | Annual price | Min. auto limits | Notes`. One row per offer, sorted by rank (recommended first). Put `(Recommended)` in the Notes column for the recommended offer. Leave Min. auto limits blank when an offer has no `minimum_auto_limits` value. When an offer includes `sample_policy_url`, paste it directly into that row's Notes column as a markdown link such as `[Sample policy](...)`. Do NOT render offers as a scattered bullet list of prose sentences like "Carrier X — $941/yr for $2M" and do NOT restate offer prices or coverage limits in the surrounding prose — the table is the source of truth.
 - Format prices as `$941/yr` and coverage limits as `$2M` / `$3M` (do not spell out "per year" or "million").
 - Put every returned offer in the table, even when more than three are present. Do not replace the full list with a shortlist or an `N more offer(s) available` teaser line.

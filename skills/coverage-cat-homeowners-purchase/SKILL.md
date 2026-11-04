@@ -55,7 +55,7 @@ curl -X POST https://www.coveragecat.com/api/consumer/homeowners/prefill \
 
 That first `home[0]` row must already distinguish the product type: use `property_type: condo` for condo coverage, `home_ownership: owned_rental` or a rented `rental_status` for landlord coverage, or a non-rental `home_ownership` plus a non-condo `property_type` for standard homeowners coverage.
 
-Sandbox and errors: the consumer-prefill handoff does not use a separate sandbox flag, while the delegated operator path uses top-level `sandbox: true` only on the first create call for a rehearsal `uid`. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | credit_consent_required | internal_error`; keep `message` for display or logging context.
+Sandbox and errors: the consumer-prefill handoff does not use a separate sandbox flag, while the delegated operator path uses top-level `sandbox: true` only on the first create call for a rehearsal `uid`. The common workflow-facing `error` values are `invalid_request | not_found | conflict | rate_limited | idempotency_conflict | stale_token | sandbox_unsupported | internal_error`; keep `message` for display or logging context. Delegated homeowners returns the consent checkpoint as status `needs_more_info` with `credit_consent_disclosure`.
 
 Payment progression: delegated homeowners quoting does not expose a separate payment API step today. On the consumer-operated path, Coverage Cat can keep offer selection and bind orchestration in chat, but there is still no first-party homeowners payment step. Any carrier payment or signing link must be sent directly to the customer's email on file.
 
@@ -151,7 +151,7 @@ Use the `uid` plus `intake_access_token` returned by consumer prefill.
 - Do not interrupt the first follow-up turn with a standalone current-policy-expiration question. If `policy_expire` is still missing, keep the second turn as the full review and submission request and carry an estimated value two months from today into that review.
 - When you render the review, keep applicant details, property details, estimated structure details, estimated systems details, and other items in clearly separated labeled bullets or sections so the review does not run together, and list any remaining actions the same way.
 - Never substitute a raw authorization boolean, agent assumption, generic prior consent, or summarized prompt for the versioned receipt. The real homeowner must answer after you display the complete returned disclosure text verbatim.
-- If Coverage Cat returns `credit_consent_required` or a `credit_consent_disclosure`, render a single review step: put the exact returned disclosure first, then show the current application summary or JSON below it.
+- If Coverage Cat returns `needs_more_info` with a `credit_consent_disclosure`, render a single review step: put the exact returned disclosure first, then show the current application summary or JSON below it.
 - If the user corrects anything during that review, patch the same `uid` first, then rerun the same one-time review step before resubmitting.
 - In sandbox mode, use fake or test contact details and never treat the returned offers or links as a real customer handoff.
 - Do not use this homeowners workflow for umbrella purchase. Use the dedicated umbrella purchase skill instead.
@@ -172,7 +172,7 @@ This is the primary endpoint for the full delegated homeowners loop:
 
 1. Create a new homeowners intake by omitting `uid`.
 2. Update the same intake by sending the returned `uid`.
-3. When Coverage Cat returns `credit_consent_required`, keep the same `uid`, show the complete returned disclosure in the single review step, and resend only with the top-level versioned `credit_consent` receipt after the real homeowner answers.
+3. When Coverage Cat returns `needs_more_info` with `credit_consent_disclosure`, keep the same `uid`, show the complete returned disclosure in the single review step, and resend only with the top-level versioned `credit_consent` receipt after the real homeowner answers.
 4. After that successful submit, expect `pending_quotes`.
 5. Poll for quote progress by sending the same `uid` again until `pending_quotes` becomes `quoted`.
 
@@ -229,7 +229,8 @@ Think about delegated homeowners fields in four buckets:
 
 These are common examples of what "fullest intake you can assemble" usually means in practice. They are not a promise that every one of these fields is required on every first create call.
 
-- Applicant/core identity: `full_name`, `email`, `age` or `date_of_birth`, `marital_status`, `sms_consent`
+- Applicant/core identity: `full_name`, `email`, `phone_number`, `age` or `date_of_birth`, `marital_status`
+- Optional service contact choices: top-level `contact_preferences.service_sms` / `service_call` receipts copied from the returned `contact_preferences_disclosures`. Show each complete disclosure verbatim and record the homeowner's Yes, No or Revoke answer; do not put legacy `sms_consent` or `phone_consent` flags inside `intake`.
 - Shared location: `intake.address` plus the same structured address on `intake.home[0].address`
 - Product classification: `home_ownership`, `property_type`, `new_purchase`, and if relevant `rental_status`
 - Core home facts: `home_sqft`, `purchase_date`, `build_date`, `roof_date`, `roof_type`, `roof_shape`, `siding_type`, `heating_type`
@@ -296,12 +297,21 @@ Example complete follow-up call after Coverage Cat returned the disclosure and t
     "disclosure_version": "2026-11-04",
     "disclosure_hash": "661bd853457cc7915cfcffb2b976b5b05108e72fc51d189e65366e659753fc76"
   },
+  "contact_preferences": {
+    "service_sms": {
+      "answer": "No",
+      "shown_to_user": true,
+      "collected_from_user": true,
+      "disclosure_version": "2026-11-04",
+      "disclosure_hash": "2c89fe85d43adb4c06f90ca33c8d8054e2e4764b607c1eb9fcf68222a483ff83"
+    }
+  },
   "intake": {
     "full_name": "Taylor Home",
     "email": "taylor.home@example.com",
+    "phone_number": "+17135550123",
     "age": "1988-04-01",
     "marital_status": "single",
-    "sms_consent": false,
     "address": {
       "streetnumber": "4225",
       "street": "Emory Ave",
@@ -452,7 +462,7 @@ Useful fields commonly needed for homeowners quoting include:
 - `marital_status`
 - `address`
 - top-level `credit_consent` receipt after the returned disclosure is shown
-- `sms_consent`
+- optional top-level `contact_preferences` receipts after the corresponding returned service disclosures are shown
 - `home`
 - On the initial create/prefill payload, `home[].home_ownership`, `home[].rental_status`, and `home[].property_type` must already distinguish landlord vs condo vs standard homeowners coverage. Coverage Cat rejects the first create call if the home row does not classify the line.
 
@@ -485,7 +495,7 @@ This endpoint always scopes the intake to homeowners (`looking_to_protect: ["own
 Coverage Cat still needs either more application data or the real homeowner's final credit authorization before it can submit.
 
 - If the response also includes `sandbox: true`, treat this as a mocked rehearsal state. Do not forward the returned links or status text to a real homeowner.
-- If Coverage Cat returns `credit_consent_required` with `credit_consent_disclosure`, treat this as the one-time review checkpoint rather than a normal missing-data failure.
+- If Coverage Cat returns `needs_more_info` with `credit_consent_disclosure`, treat this as the one-time review checkpoint rather than a normal missing-data failure.
 - In that checkpoint, display the complete returned disclosure text verbatim before asking the real homeowner to answer.
 - Render a single review step: put that exact disclosure first, then show the current application summary or JSON below it.
 - Do not interrupt that review turn just to ask current policy expiration on its own. If `policy_expire` is still missing, keep it in the review turn as an estimated value two months from today.
