@@ -277,6 +277,10 @@ components:
       additionalProperties: false
       description: The exact current insurance privacy notice and application scope. Show the complete text and acknowledgment_text verbatim before collecting the shopper's receipt.
       properties:
+        acknowledgment_hash:
+          description: SHA-256 hash of the exact acknowledgment_text shown to the shopper.
+          pattern: '^[a-f0-9]{64}$'
+          type: string
         acknowledgment_text:
           type: string
         kind:
@@ -318,6 +322,7 @@ components:
         - product
         - operational_status
         - acknowledgment_text
+        - acknowledgment_hash
       type: object
     PrivacyNoticeAcknowledgment:
       additionalProperties: false
@@ -3904,7 +3909,7 @@ paths:
               -H "Content-Type: application/json" \
               --data-binary @- <<'JSON'
             {
-              "current_auto_coverages": "250_500_100",
+              "current_auto_coverages": "500k/1m",
               "desired_coverage_limit": 2000000,
               "zip": "94107"
             }
@@ -3913,7 +3918,7 @@ paths:
           lang: JavaScript
           source: |-
             const payload = {
-              "current_auto_coverages": "250_500_100",
+              "current_auto_coverages": "500k/1m",
               "desired_coverage_limit": 2000000,
               "zip": "94107"
             };
@@ -3936,7 +3941,7 @@ paths:
             import requests
 
             payload = {
-                "current_auto_coverages": "250_500_100",
+                "current_auto_coverages": "500k/1m",
                 "desired_coverage_limit": 2000000,
                 "zip": "94107"
             }
@@ -4965,7 +4970,7 @@ paths:
               --data-binary @- <<'JSON'
             {
               "intake": {
-                "current_auto_coverages": "250_500_100"
+                "current_auto_coverages": "500k/1m"
               },
               "uid": "umbrella-req-123"
             }
@@ -4975,7 +4980,7 @@ paths:
           source: |-
             const payload = {
               "intake": {
-                "current_auto_coverages": "250_500_100"
+                "current_auto_coverages": "500k/1m"
               },
               "uid": "umbrella-req-123"
             };
@@ -4999,7 +5004,7 @@ paths:
 
             payload = {
                 "intake": {
-                "current_auto_coverages": "250_500_100"
+                "current_auto_coverages": "500k/1m"
             },
                 "uid": "umbrella-req-123"
             }
@@ -5146,7 +5151,7 @@ paths:
               --data-binary @- <<'JSON'
             {
               "intake": {
-                "current_auto_coverages": "250_500_100",
+                "current_auto_coverages": "500k/1m",
                 "desired_coverage_limit": 2000000,
                 "full_name": "Taylor Example",
                 "zip": "94107"
@@ -5158,7 +5163,7 @@ paths:
           source: |-
             const payload = {
               "intake": {
-                "current_auto_coverages": "250_500_100",
+                "current_auto_coverages": "500k/1m",
                 "desired_coverage_limit": 2000000,
                 "full_name": "Taylor Example",
                 "zip": "94107"
@@ -5184,7 +5189,7 @@ paths:
 
             payload = {
                 "intake": {
-                "current_auto_coverages": "250_500_100",
+                "current_auto_coverages": "500k/1m",
                 "desired_coverage_limit": 2000000,
                 "full_name": "Taylor Example",
                 "zip": "94107"
@@ -5351,14 +5356,42 @@ paths:
               -H "Content-Type: application/json" \
               --data-binary @- <<'JSON'
             {
-              "uid": "umbrella-req-123"
+              "uid": "umbrella-req-123",
+              "review_token": "review-token-from-ready-for-review-response",
+              "review_confirmed": true,
+              "privacy_notice_acknowledgment": {
+                "notice_type": "initial",
+                "acknowledged": true,
+                "electronic_delivery_agreed": true,
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "disclosure_version": "coverage-cat-insurance-privacy-notice-2026-11-04-r3",
+                "disclosure_hash": "134b3307435b096f7699b5290d3a53576510a8a61376a6eae30235cef2b33baf",
+                "disclosure_state": "CA",
+                "disclosure_product": "umbrella",
+                "presented_at": "2026-11-04T20:15:00Z"
+              }
             }
             JSON
         - label: fetch
           lang: JavaScript
           source: |-
             const payload = {
-              "uid": "umbrella-req-123"
+              "uid": "umbrella-req-123",
+              "review_token": "review-token-from-ready-for-review-response",
+              "review_confirmed": true,
+              "privacy_notice_acknowledgment": {
+                "notice_type": "initial",
+                "acknowledged": true,
+                "electronic_delivery_agreed": true,
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "disclosure_version": "coverage-cat-insurance-privacy-notice-2026-11-04-r3",
+                "disclosure_hash": "134b3307435b096f7699b5290d3a53576510a8a61376a6eae30235cef2b33baf",
+                "disclosure_state": "CA",
+                "disclosure_product": "umbrella",
+                "presented_at": "2026-11-04T20:15:00Z"
+              }
             };
 
             const response = await fetch("https://www.coveragecat.com/api/agent/umbrella/quotes", {
@@ -5379,7 +5412,21 @@ paths:
             import requests
 
             payload = {
-                "uid": "umbrella-req-123"
+                "uid": "umbrella-req-123",
+                "review_token": "review-token-from-ready-for-review-response",
+                "review_confirmed": True,
+                "privacy_notice_acknowledgment": {
+                    "notice_type": "initial",
+                    "acknowledged": True,
+                    "electronic_delivery_agreed": True,
+                    "shown_to_user": True,
+                    "collected_from_user": True,
+                    "disclosure_version": "coverage-cat-insurance-privacy-notice-2026-11-04-r3",
+                    "disclosure_hash": "134b3307435b096f7699b5290d3a53576510a8a61376a6eae30235cef2b33baf",
+                    "disclosure_state": "CA",
+                    "disclosure_product": "umbrella",
+                    "presented_at": "2026-11-04T20:15:00Z"
+                }
             }
 
             response = requests.post(
@@ -6320,6 +6367,18 @@ paths:
               --data-binary @- <<'JSON'
             {
               "confirm_submission": true,
+              "privacy_notice_acknowledgment": {
+                "notice_type": "initial",
+                "acknowledged": true,
+                "electronic_delivery_agreed": true,
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "disclosure_version": "coverage-cat-insurance-privacy-notice-2026-11-04-r3",
+                "disclosure_hash": "134b3307435b096f7699b5290d3a53576510a8a61376a6eae30235cef2b33baf",
+                "disclosure_state": "CA",
+                "disclosure_product": "umbrella",
+                "presented_at": "2026-11-04T20:15:00Z"
+              },
               "intake": {
                 "marital_status": "single"
               }
@@ -6330,6 +6389,18 @@ paths:
           source: |-
             const payload = {
               "confirm_submission": true,
+              "privacy_notice_acknowledgment": {
+                "notice_type": "initial",
+                "acknowledged": true,
+                "electronic_delivery_agreed": true,
+                "shown_to_user": true,
+                "collected_from_user": true,
+                "disclosure_version": "coverage-cat-insurance-privacy-notice-2026-11-04-r3",
+                "disclosure_hash": "134b3307435b096f7699b5290d3a53576510a8a61376a6eae30235cef2b33baf",
+                "disclosure_state": "CA",
+                "disclosure_product": "umbrella",
+                "presented_at": "2026-11-04T20:15:00Z"
+              },
               "intake": {
                 "marital_status": "single"
               }
@@ -6354,9 +6425,21 @@ paths:
 
             payload = {
                 "confirm_submission": True,
+                "privacy_notice_acknowledgment": {
+                    "notice_type": "initial",
+                    "acknowledged": True,
+                    "electronic_delivery_agreed": True,
+                    "shown_to_user": True,
+                    "collected_from_user": True,
+                    "disclosure_version": "coverage-cat-insurance-privacy-notice-2026-11-04-r3",
+                    "disclosure_hash": "134b3307435b096f7699b5290d3a53576510a8a61376a6eae30235cef2b33baf",
+                    "disclosure_state": "CA",
+                    "disclosure_product": "umbrella",
+                    "presented_at": "2026-11-04T20:15:00Z"
+                },
                 "intake": {
-                "marital_status": "single"
-            }
+                    "marital_status": "single"
+                }
             }
 
             response = requests.patch(
@@ -6930,7 +7013,7 @@ paths:
               --data-binary @- <<'JSON'
             {
               "intake": {
-                "current_auto_coverages": "250_500_100"
+                "current_auto_coverages": "500k/1m"
               }
             }
             JSON
@@ -6939,7 +7022,7 @@ paths:
           source: |-
             const payload = {
               "intake": {
-                "current_auto_coverages": "250_500_100"
+                "current_auto_coverages": "500k/1m"
               }
             };
 
@@ -6962,7 +7045,7 @@ paths:
 
             payload = {
                 "intake": {
-                "current_auto_coverages": "250_500_100"
+                "current_auto_coverages": "500k/1m"
             }
             }
 
