@@ -1,18 +1,32 @@
 # Coverage Cat Public Skills
 
-## ChatGPT app
+## ChatGPT and Claude connectors
 
-For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
-Use the tools advertised by that endpoint to prepare the application, obtain the
-shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
-or `payment_url` as a link: the shopper completes document uploads and final
-checkout on Coverage Cat's website. Afterward, read status or the policy tool.
-Do not open or complete checkout for the shopper, collect card details in chat,
-or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
-intake tokens and sessions work only on its dedicated endpoint.
+Use the dedicated endpoint for the shopper's hosted assistant:
 
-The default consumer MCP and REST instructions below apply to other hosts and
-retain their existing upload and payment capabilities.
+- ChatGPT: `https://www.coveragecat.com/api/chatgpt/mcp`
+- Claude: `https://www.coveragecat.com/api/claude/mcp`
+
+Discovery and public research do not require sign-in. Application tools use the
+connector's account OAuth. Use its advertised coarse estimate fields, show the
+saved review, and collect the required approvals before comparing or selecting
+estimates. Initial modeled estimates are not final carrier quotes.
+
+After selection, use the returned authenticated website link for identity
+details, underwriting questions, declarations, and checkout. Explain:
+“To comply with this platform's personal-data handling rules, Coverage Cat
+collects identity details and declarations on its secure website after you choose
+an estimate.” Do not collect those details, document contents, or card data in
+hosted chat, and do not switch APIs to bypass this boundary.
+
+Return to the same assistant connection and check the same application after the
+website step. `website_steps_complete` means the required website inputs are
+saved; it does not mean payment or coverage is complete. Do not request another
+upload merely because a secure link remains available. Restore an expired
+connection and list accessible applications rather than creating a replacement.
+
+The public consumer MCP, REST, PACT, and Poppy instructions below apply to their
+own clients and retain their existing application, upload, and payment contracts.
 
 This repository is the public source for Coverage Cat's installable agent skills.
 
@@ -53,7 +67,7 @@ that flow is temporarily under construction:
 Guardrails:
 
 - Agents landing on `coveragecat.com` should start with `https://www.coveragecat.com/AGENTS.md`, `https://www.coveragecat.com/agents.txt`, or `https://www.coveragecat.com/.well-known/agents.txt`, then prefer the MCP or REST surfaces those files point to. Do not drive the human browser UI unless Coverage Cat should take over the shopper-facing flow.
-- If your runtime supports PACT/A2A personal-agent identity, especially Instinct, prefer `https://www.coveragecat.com/.well-known/agent-card.json` as the visible Coverage Cat entrypoint, then keep the shopper on the consumer MCP or consumer REST surfaces the card points to. This is optional: do not force MCP-native or direct-REST runtimes onto PACT.
+- PACT/A2A clients use `https://www.coveragecat.com/.well-known/agent-card.json` and its authenticated message interface through checkout. Poppy clients use `https://www.coveragecat.com/.well-known/poppy.json` and its advertised MCP/session endpoints. Keep the established transport and use `consumer_purchases` to resume authorized applications after a renewed session. A fresh status poll needs a new A2A message ID.
 - Register the default consumer MCP at `/.well-known/mcp.json` when you want live quoting or comparison in a manifest-aware MCP host. For local Codex direct transport, use `https://www.coveragecat.com/api/consumer/mcp` instead of the manifest, then restart the session and check `/mcp`. That same consumer connector already exposes `docs_list_topics`, `docs_search`, and `docs_get_resource`, so Coverage Cat setup stays on one MCP connection.
 - If Coverage Cat MCP tools are unavailable in a runtime that supports MCP, stop and ask a short choice question instead of telling the user to register `/.well-known/mcp.json` immediately.
   Ask the question on its own line exactly as:

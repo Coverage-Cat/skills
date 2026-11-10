@@ -5,19 +5,23 @@ description: "Use when an agent needs Coverage Cat's research-only insurance cal
 
 # Coverage Cat Agent Tools
 
-## ChatGPT app
+## ChatGPT and Claude connectors
 
-For ChatGPT, connect the Streamable HTTP endpoint `https://www.coveragecat.com/api/chatgpt/mcp`.
-Use the tools advertised by that endpoint to prepare the application, obtain the
-shopper's consent, compare quotes, and select an offer. Present its `checkout_url`
-or `payment_url` as a link: the shopper completes document uploads and final
-checkout on Coverage Cat's website. Afterward, read status or the policy tool.
-Do not open or complete checkout for the shopper, collect card details in chat,
-or switch to another MCP/REST endpoint to bypass website checkout. ChatGPT's
-intake tokens and sessions work only on its dedicated endpoint.
+Use the dedicated endpoint for the hosted assistant:
 
-The default consumer MCP and REST instructions below apply to other hosts and
-retain their existing upload and payment capabilities.
+- ChatGPT: `https://www.coveragecat.com/api/chatgpt/mcp`
+- Claude: `https://www.coveragecat.com/api/claude/mcp`
+
+Use only the research tools advertised by that connector. Public research does
+not require sign-in or an application. The umbrella calculator needs only the
+state and returns illustrative price ranges, not personalized quotes or offers.
+Do not collect identity details, declarations, or card data in chat, and do not
+switch APIs to bypass the connector's personal-data boundary.
+
+If the user wants Coverage Cat to shop, quote, or buy umbrella insurance, switch
+to `umbrella-insurance-compare-and-purchase` while keeping the same connector.
+The API and tool-page discovery instructions below apply to other clients;
+they do not expand the tools available on hosted connectors.
 
 Use this skill for Coverage Cat's read-only research APIs and tool pages.
 
