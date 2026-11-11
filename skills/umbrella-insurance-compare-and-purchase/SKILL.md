@@ -106,3 +106,25 @@ Keep the shopper on the machine-readable MCP or REST loop until Coverage Cat ret
 - For Monoline and Markel, keep required home and auto declarations in the post-choose flow. If both files are already available, prefer one attach call with `attachments[]`. If your runtime already has a PDF, PNG, or JPEG on disk and you want to avoid hand-building base64, prefer `POST /api/intake/:uid/attach-upload?type=...` with `application/octet-stream`. Once those uploads are on file, `documents_pending_review` usually advances to `payment_needed` with the direct insurer checkout price and `payment_url` within about 5-10 minutes while declarations verification continues in parallel.
 - If you are rehearsing, set `sandbox: true` only on the first create call for that `uid`. On delegated `draft`, sandbox stops at mocked `quotes` and `status`. On consumer umbrella prefill, sandbox stays on the consumer follow-up tools with synthetic results only.
 - Keep read-only calculator jobs on the separate insurance-tools skill rather than opening a delegated umbrella session.
+
+## Product feedback
+
+Use MCP `submit_feedback` or `POST /api/consumer/feedback` at any stage to
+report a bug, suggestion, or purchase-flow problem. The CLI equivalent is
+`coveragecat feedback "Describe the issue"`; operator REST clients can use
+`POST /api/agent/feedback`. No application or operator key is required.
+
+Send `message` (1–4000 characters), optional `category` (`bug`, `suggestion`,
+`other`), and optional `tool` (an interface/tool name using letters, numbers,
+underscores, or hyphens, up to 80 characters). An optional UUID `request_id`
+deduplicates retries; reuse it only with the same content. A successful response
+contains `status: "received"` and `feedback_id`. Feedback is saved in Coverage
+Cat's internal Notifications queue for admin review and acknowledgement.
+
+Share feedback the shopper asks to send or your own technical observations;
+do not invent shopper opinions, send transcripts, or include personal details,
+credentials, application tokens, or payment information. Do not interrupt or
+gate a purchase to solicit feedback. Feedback does not submit, select, bind,
+change coverage, or open a policy service request. Use the advertised policy
+service tool for policy support. Stay on the current MCP connection, including
+ChatGPT or Claude; use the REST fallback only when MCP is unavailable.

@@ -34,3 +34,25 @@ available umbrella purchase and existing-policy support operations.
 
 This document remains at its original URL for existing integrations. Its legacy
 skill name is retained for compatibility; it no longer starts homeowners purchases.
+
+## Product feedback
+
+Use MCP `submit_feedback` or `POST /api/consumer/feedback` at any stage to
+report a bug, suggestion, or purchase-flow problem. The CLI equivalent is
+`coveragecat feedback "Describe the issue"`; operator REST clients can use
+`POST /api/agent/feedback`. No application or operator key is required.
+
+Send `message` (1–4000 characters), optional `category` (`bug`, `suggestion`,
+`other`), and optional `tool` (an interface/tool name using letters, numbers,
+underscores, or hyphens, up to 80 characters). An optional UUID `request_id`
+deduplicates retries; reuse it only with the same content. A successful response
+contains `status: "received"` and `feedback_id`. Feedback is saved in Coverage
+Cat's internal Notifications queue for admin review and acknowledgement.
+
+Share feedback the shopper asks to send or your own technical observations;
+do not invent shopper opinions, send transcripts, or include personal details,
+credentials, application tokens, or payment information. Do not interrupt or
+gate a purchase to solicit feedback. Feedback does not submit, select, bind,
+change coverage, or open a policy service request. Use the advertised policy
+service tool for policy support. Stay on the current MCP connection, including
+ChatGPT or Claude; use the REST fallback only when MCP is unavailable.
